@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>NoWP Client - Browser Example</title>
+  <style>
+    body {
+      font-family: system-ui, -apple-system, sans-serif;
+      max-width: 800px;
+      margin: 40px auto;
+      padding: 0 20px;
+    }
+    .section {
+      margin: 20px 0;
+      padding: 20px;
+      border: 1px solid #ddd;
+      border-radius: 8px;
+    }
+    button {
+      padding: 10px 20px;
+      margin: 5px;
+      cursor: pointer;
+    }
+    #output {
+      background: #f5f5f5;
+      padding: 15px;
+      border-radius: 4px;
+      white-space: pre-wrap;
+      font-family: monospace;
+      font-size: 12px;
+    }
+  </style>
+</head>
+<body>
+  <h1>NoWP API Client - Browser Example</h1>
+
+  <div class="section">
+    <h2>Authentication</h2>
+    <input type="email" id="email" placeholder="Email" value="admin@example.com">
+    <input type="password" id="password" placeholder="Password" value="password">
+    <button onclick="login()">Login</button>
+    <button onclick="logout()">Logout</button>
+    <button onclick="getMe()">Get Current User</button>
+  </div>
+
+  <div class="section">
+    <h2>Content</h2>
+    <button onclick="listPosts()">List Posts</button>
+    <button onclick="createPost()">Create Post</button>
+  </div>
+
+  <div class="section">
+    <h2>Media</h2>
+    <input type="file" id="fileInput">
+    <button onclick="uploadFile()">Upload</button>
+    <button onclick="listMedia()">List Media</button>
+  </div>
+
+  <div class="section">
+    <h2>Output</h2>
+    <div id="output">Ready...</div>
+  </div>
+
+  <script type="module">
+    import { APIClient } from '../dist/index.mjs';
+
+    // Initialize client
+    window.client = new APIClient({
+      baseURL: 'http://localhost:8000',
+      token: localStorage.getItem('token'),
+      onTokenRefresh: (token) => {
+        localStorage.setItem('token', token);
+        log('Token refreshed and saved');
+      },
+    });
+
+    function log(message, data = null) {
+      const output = document.getElementById('output');
+      const timestamp = new Date().toLocaleTimeString();
+      let text = `[${timestamp}] ${message}`;
+      if (data) {
+        text += '\n' + JSON.stringify(data, null, 2);
+      }
+      output.textContent = text + '\n\n' + output.textContent;
+    }
+
+    window.log = log;
+
+    // Authentication
+    window.login = async () => {
+      try {
+        const email = document.getElementById('email').value;
+        const password = document.getElementById('password').value;
+        const result = await window.client.auth.login(email, password);
+        log('Login successful', result);
+      } catch (error) {
+        log('Login failed: ' + error.message);
+      }
+    };
+
+    window.logout = async () => {
+      try {
+        await window.client.auth.logout();
+        localStorage.removeItem('token');
+        log('Logout successful');
+      } catch (error) {
+        log('Logout failed: ' + error.message);
+      }
+    };
+
+    window.getMe = async () => {
+      try {
+        const user = await window.client.auth.me();
+        log('Current user', user);
+      } catch (error) {
+        log('Failed to get user: ' + error.message);
+      }
+    };
+
+    // Content
+    window.listPosts = async () => {
+      try {
+        const result = await window.client.content.list({
+          type: 'post',
+          page: 1,
+          perPage: 5,
+        });
+        log(`Found ${result.meta.total} posts`, result.data);
+      } catch (error) {
+        log('Failed to list posts: ' + error.message);
+      }
+    };
+
+    window.createPost = async () => {
+      try {
+        const post = await window.client.content.create({
+          title: 'Browser Post ' + Date.now(),
+          content: 'Created from browser!',
+          type: 'post',
+          status: 'draft',
+        });
+        log('Post created', post);
+      } catch (error) {
+        log('Failed to create post: ' + error.message);
+      }
+    };
+
+    // Media
+    window.uploadFile = async () => {
+      try {
+        const fileInput = document.getElementById('fileInput');
+        if (!fileInput.files.length) {
+          log('Please select a file');
+          return;
+        }
+        const file = fileInput.files[0];
+        log(`Uploading ${file.name}...`);
+        const media = await window.client.media.upload(file);
+        log('Upload successful', media);
+      } catch (error) {
+        log('Upload failed: ' + error.message);
+      }
+    };
+
+    window.listMedia = async () => {
+      try {
+        const result = await window.client.media.list({ page: 1, perPage: 10 });
+        log(`Found ${result.meta.total} media items`, result.data);
+      } catch (error) {
+        log('Failed to list media: ' + error.message);
+      }
+    };
+
+    log('Client initialized');
+  </script>
+</body>
+</html>
