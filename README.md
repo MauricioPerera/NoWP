@@ -1,187 +1,233 @@
 # NoWP Framework
 
-A modern, lightweight CMS/BaaS framework designed as an alternative to WordPress for 2026. Built with PHP 8.1+ and optimized for shared hosting environments ($3/month).
+A modern, lightweight CMS/BaaS framework with built-in AI agent, semantic search, and workflow engine. Built with PHP 8.1+ and optimized for shared hosting ($3/month).
 
-## Features
+## What makes it different
 
-- **API-First Architecture**: RESTful APIs for all functionality with OpenAPI documentation
-- **Modern PHP**: Built with PHP 8.1+ features (enums, readonly properties, attributes)
-- **Lightweight**: Optimized for shared hosting (< 256MB RAM, < 100ms response time, < 100MB disk)
-- **TypeScript Client**: Full-featured API client for Node.js and browsers
-- **Admin Panel**: Modern, responsive SPA for content management
-- **Extensible**: Plugin system with hooks and filters
-- **Secure**: JWT authentication, bcrypt passwords, CSRF protection, rate limiting
-- **i18n Ready**: Multi-language content support
-- **Developer-Friendly**: PSR-4 autoloading, DI container, comprehensive testing
+NoWP is a CMS that's also an **agentic platform**. Out of the box:
+
+- **Semantic Search** — find content by meaning, not keywords. Powered by [php-vector-store](https://github.com/MauricioPerera/php-vector-store).
+- **AI Agent** — chat with your site. The agent can search, create content, execute workflows, and remember across sessions.
+- **Workflow Engine** — chain operations (A2E pattern): filter → transform → conditional → loop, with data flowing between steps.
+- **Persistent Memory** — the agent remembers user preferences, facts, and corrections across conversations.
+- **Works offline** — Ollama for local AI + EmbeddingGemma for local embeddings. Zero cloud dependency.
 
 ## Quick Start
 
 ```bash
-# Install dependencies
 composer install
-
-# Configure environment
 cp .env.example .env
-# Edit .env with your settings
-
-# Run migrations
 php cli/migrate.php
-
-# Check system requirements
-php cli/check-resources.php
-
-# Start development server
 php -S localhost:8000 -t public/
 ```
 
-Visit `http://localhost:8000/api/docs` for interactive API documentation.
+### Configure AI (choose one)
 
-## Project Structure
+```env
+# Option A: Local / Offline (free)
+AGENT_PROVIDER=ollama
+OLLAMA_HOST=http://localhost:11434
+OLLAMA_MODEL=llama3.1
+SEARCH_PROVIDER=ollama
+OLLAMA_EMBED_MODEL=embeddinggemma
 
-```
-/
-├── public/          # Web root
-├── src/             # Framework source
-│   ├── Auth/        # Authentication & authorization
-│   ├── Content/     # Content management
-│   ├── Core/        # Core framework
-│   ├── Database/    # Database layer
-│   ├── Plugin/      # Plugin system
-│   ├── Storage/     # File & media management
-│   └── Theme/       # Theme system
-├── admin/           # Admin panel (SPA)
-├── client/          # TypeScript API client
-├── config/          # Configuration
-├── migrations/      # Database migrations
-├── plugins/         # User plugins
-├── themes/          # User themes
-├── tests/           # Test suite
-├── docs/            # Documentation
-└── cli/             # CLI commands
+# Option B: Cloud
+AGENT_PROVIDER=openrouter
+OPENROUTER_API_KEY=sk-...
+OPENROUTER_MODEL=anthropic/claude-sonnet-4
+SEARCH_PROVIDER=cloudflare
+CLOUDFLARE_ACCOUNT_ID=xxx
+CLOUDFLARE_AI_API_KEY=xxx
 ```
 
-## Components
+## Architecture
 
-### Backend Framework (PHP)
-- RESTful API with OpenAPI/Swagger documentation
-- JWT authentication with role-based permissions
-- Content management with versioning and custom fields
-- Media management with image processing
-- Plugin system with hooks and filters
-- Theme system with template inheritance
-- Multi-language support (i18n)
-- Caching (APCu, Redis, Memcached, File)
-- Backup and migration tools
-
-### TypeScript API Client
-- Works in Node.js and browsers
-- Automatic token management
-- Retry with exponential backoff
-- Full TypeScript types
-- Tree-shakeable
-
-```typescript
-import { APIClient } from '@nowp/client';
-
-const client = new APIClient({ baseURL: 'https://your-site.com' });
-await client.auth.login('user@example.com', 'password');
-const posts = await client.content.list({ type: 'post' });
+```
+src/
+├── Agent/                  # AI Agent SDK
+│   ├── AgentService.php       Agentic loop (chat → tools → respond)
+│   ├── AgentController.php    REST API endpoints
+│   ├── Provider/              AI providers (Ollama, OpenAI, OpenRouter, custom)
+│   ├── Tools/                 Tool definitions with fluent builder
+│   ├── Workflow/              A2E workflow engine with data store
+│   └── Memory/                Persistent semantic memory
+├── Search/                 # Semantic Search
+│   ├── SearchService.php      Index, search, hybrid search
+│   ├── SearchController.php   REST API endpoints
+│   ├── EmbeddingProvider.php  Ollama, Cloudflare, OpenAI, custom
+│   └── SearchServiceProvider  Auto-index on content save
+├── Auth/                   # JWT + roles + permissions
+├── Content/                # CRUD + versioning + custom fields
+├── Core/                   # Router, DI Container, Middleware
+├── Database/               # MySQL + SQLite, QueryBuilder
+├── Plugin/                 # Hooks & filters (WordPress-style)
+├── Cache/                  # APCu, Redis, Memcached, File
+├── Storage/                # File uploads, image processing
+└── Theme/                  # Template system with inheritance
 ```
 
-### Admin Panel
-- Modern, responsive SPA (vanilla JS + Vite)
-- Dashboard with statistics
-- Content management (CRUD)
-- Media library with upload
-- User management
-- Plugin documentation
-- Mobile-friendly
+## Agent API
+
+### Chat
+
+```bash
+curl -X POST http://localhost:8000/api/agent/chat \
+  -H 'Content-Type: application/json' \
+  -d '{"message": "Find posts about PHP and summarize them"}'
+```
+
+The agent automatically:
+1. Calls `search_content` tool to find relevant posts
+2. Reads the results
+3. Generates a summary
+4. Remembers the interaction for next session
+
+### Built-in Tools
+
+| Tool | What it does |
+|------|-------------|
+| `search_content` | Semantic search across all site content |
+| `get_content` | Get a content item by ID |
+| `create_content` | Create a new post or page |
+| `remember` | Save a memory for future sessions |
+| `recall` | Retrieve relevant memories |
+| `run_workflow` | Execute an A2E workflow |
+
+### Workflows
+
+```bash
+curl -X POST http://localhost:8000/api/agent/workflow \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "steps": [
+      {"id": "posts", "type": "ExecuteTool", "tool": "search_content", "input": {"query": "PHP"}},
+      {"id": "titles", "type": "TransformData", "data": "/posts", "operation": "map", "field": "title"},
+      {"id": "count", "type": "TransformData", "data": "/titles", "operation": "count"}
+    ]
+  }'
+```
+
+Operations: `ExecuteTool`, `FilterData`, `TransformData`, `Conditional`, `Loop`, `StoreData`, `Wait`, `MergeData`.
+
+### Memory
+
+```bash
+# Save
+curl -X POST http://localhost:8000/api/agent/memory \
+  -H 'Content-Type: application/json' \
+  -d '{"content": "User prefers concise answers", "type": "preference"}'
+
+# Recall
+curl "http://localhost:8000/api/agent/memory?q=communication+style"
+```
+
+## Semantic Search API
+
+Auto-indexes content on create/update. No manual indexing needed.
+
+```bash
+# Search
+curl "http://localhost:8000/api/search?q=how+to+deploy&type=post&limit=5"
+
+# Stats
+curl "http://localhost:8000/api/search/stats"
+
+# Rebuild index
+curl -X POST "http://localhost:8000/api/search/reindex"
+```
+
+### How it works
+
+```
+Content saved → Hook fires → Embedding generated → Vector stored (392 bytes)
+                                                           ↓
+Search query → Embedding generated → Matryoshka search (128→256→384d)
+                                                           ↓
+                                              Results ranked by semantic similarity
+```
+
+- **392 bytes per vector** (Int8 quantized, 384 dimensions)
+- **Matryoshka search**: 3-5x faster than brute-force
+- **100% recall** with EmbeddingGemma embeddings
+- **Works offline** with Ollama
+
+## Content API
+
+```bash
+# Create
+curl -X POST http://localhost:8000/api/contents \
+  -H 'Authorization: Bearer TOKEN' \
+  -d '{"title": "My Post", "content": "Hello!", "type": "post", "status": "published"}'
+
+# List
+curl http://localhost:8000/api/contents?type=post&limit=10
+
+# Get
+curl http://localhost:8000/api/contents/1
+
+# Update
+curl -X PUT http://localhost:8000/api/contents/1 \
+  -d '{"title": "Updated Title"}'
+
+# Delete
+curl -X DELETE http://localhost:8000/api/contents/1
+```
+
+## Plugin System
+
+WordPress-style hooks and filters:
+
+```php
+// In your plugin
+$hooks->addAction('content.created', function ($content) {
+    // React to new content
+});
+
+$hooks->addFilter('content.before_create', function ($data) {
+    $data['title'] = strtoupper($data['title']);
+    return $data;
+});
+```
+
+## Features
+
+- **API-First**: RESTful APIs for all functionality
+- **Modern PHP**: PHP 8.1+ (enums, readonly, named args)
+- **Authentication**: JWT with role-based permissions
+- **Content**: CRUD, versioning, custom fields, i18n
+- **Media**: Upload, image processing, organization
+- **Cache**: APCu, Redis, Memcached, File (auto-detect)
+- **Themes**: Template inheritance, parent/child
+- **Security**: CSRF, rate limiting, security headers, bcrypt
+- **Testing**: 63 test files with Pest PHP
+- **Admin Panel**: Responsive SPA (vanilla JS)
+- **TypeScript Client**: Full-typed API client
 
 ## Requirements
 
 - PHP 8.1+
-- MySQL 5.7+
-- Apache with mod_rewrite (or nginx)
-- PHP Extensions: PDO, pdo_mysql, mbstring, json, openssl
-- Optional: fileinfo, gd/imagick (for media processing)
+- MySQL 5.7+ or SQLite
+- Optional: Ollama (for local AI)
+- Optional: APCu/Redis/Memcached (for caching)
 
-## Documentation
+## Configuration
 
-- [Quick Start Guide](docs/quick-start.md) - Get started in 5 minutes
-- [Tutorials](docs/tutorials.md) - Step-by-step guides
-- [API Documentation](http://localhost:8000/api/docs) - Interactive Swagger UI
-- [Deployment Guide](docs/deployment.md) - Production deployment
-- [Performance Optimization](docs/performance-optimization.md) - Optimization tips
-- [Authentication](docs/auth-middleware.md) - JWT & permissions
-- [Middleware](docs/middleware.md) - Request/response middleware
-- [Permissions](docs/permissions.md) - Role-based access control
-
-## API Examples
-
-See [examples/api-usage-examples.md](examples/api-usage-examples.md) for complete examples in PHP, JavaScript, and cURL.
-
-### Authentication
-```bash
-curl -X POST http://localhost:8000/api/auth/login \
-  -H 'Content-Type: application/json' \
-  -d '{"email": "admin@example.com", "password": "password"}'
-```
-
-### Create Content
-```bash
-curl -X POST http://localhost:8000/api/contents \
-  -H 'Authorization: Bearer YOUR_TOKEN' \
-  -H 'Content-Type: application/json' \
-  -d '{
-    "title": "My First Post",
-    "content": "Hello, World!",
-    "type": "post",
-    "status": "published"
-  }'
-```
-
-## Testing
-
-```bash
-# Run all tests
-composer test
-
-# Run with coverage
-composer test:coverage
-
-# Run specific test suite
-./vendor/bin/pest tests/Unit/
-./vendor/bin/pest tests/Integration/
-```
+| File | What it configures |
+|------|-------------------|
+| `config/app.php` | App name, env, JWT, security |
+| `config/database.php` | MySQL/SQLite connection |
+| `config/cache.php` | Cache driver auto-detection |
+| `config/search.php` | Embedding provider, dimensions, auto-index |
+| `config/agent.php` | AI provider, tools, memory, system prompt |
 
 ## Performance
 
-Verified resource usage:
-- Memory: ~4MB typical (< 256MB limit)
-- Response time: ~0.01ms (< 100ms limit)
-- Disk space: ~1.1MB core (< 100MB limit)
-- Supports shared hosting ($3/month)
-
-## Security Features
-
-- Prepared statements (SQL injection prevention)
-- Bcrypt password hashing (work factor 10)
-- JWT authentication with expiration
-- CSRF token protection
-- Rate limiting (authentication endpoints)
-- Security headers (CSP, X-Frame-Options, etc.)
-- Input validation and sanitization
-- Security event logging
-
-## Development
-
-Built with modern practices:
-- PSR-4 autoloading
-- Dependency injection container
-- Pest PHP for testing
-- Property-based testing support
-- OpenAPI specification generation
-- Comprehensive error handling
+- Memory: ~4MB typical
+- Response: <100ms
+- Disk: <100MB core
+- Vectors: 392 bytes each (Int8 384d)
+- Search: ~5ms per query
+- Runs on $3/month shared hosting
 
 ## License
 
