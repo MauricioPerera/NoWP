@@ -11,11 +11,14 @@ use Framework\Agent\Workflow\WorkflowEngine;
 use Framework\Agent\Memory\MemoryService;
 use Framework\Agent\MCP\MCPServer;
 use Framework\Agent\MCP\MCPController;
+use Framework\Agent\Data\EntitySchema;
+use Framework\Agent\Data\EntityMaterializer;
 use Framework\Core\Container;
 use Framework\Core\Router;
 use Framework\Search\SearchService;
 use Framework\Content\ContentRepository;
 use Framework\Content\ContentService;
+use Framework\Database\Connection;
 
 class AgentServiceProvider
 {
@@ -52,6 +55,15 @@ class AgentServiceProvider
         // Register built-in tools
         self::registerBuiltinTools($agent, $container, $config);
 
+        // Build A2D materializer
+        if ($container->has(Connection::class)) {
+            $materializer = new EntityMaterializer(
+                $container->get(Connection::class),
+                $container->has(SearchService::class) ? $container->get(SearchService::class) : null,
+            );
+            $container->singleton(EntityMaterializer::class, fn() => $materializer);
+        }
+
         $container->singleton(AgentService::class, fn() => $agent);
     }
 
@@ -66,6 +78,41 @@ class AgentServiceProvider
         $router->post('/api/agent/memory', fn($req) => $make()->saveMemory($req));
         $router->get('/api/agent/memory', fn($req) => $make()->recallMemory($req));
         $router->post('/api/agent/reset', fn() => $make()->reset());
+
+        // A2D entity endpoints (auto-generated CRUD for materialized entities)
+        if ($container->has(EntityMaterializer::class)) {
+            $mat = fn() => $container->get(EntityMaterializer::class);
+
+            $router->get('/api/entities', fn() => $mat()->listSchemas());
+
+            $router->post('/api/entities', function ($req) use ($mat) {
+                $def = $req->json();
+                $schema = new EntitySchema($def);
+                return $mat()->materialize($schema);
+            });
+
+            $router->get('/api/entities/{entity}', function ($req, $entity) use ($mat) {
+                $filters = $req->json() ?: [];
+                $limit = (int) $req->query('limit', 50);
+                return $mat()->findAll($entity, $filters, $limit);
+            });
+
+            $router->post('/api/entities/{entity}', function ($req, $entity) use ($mat) {
+                return $mat()->insert($entity, $req->json());
+            });
+
+            $router->get('/api/entities/{entity}/{id}', function ($req, $entity, $id) use ($mat) {
+                return $mat()->find($entity, (int) $id) ?? ['error' => 'Not found'];
+            });
+
+            $router->put('/api/entities/{entity}/{id}', function ($req, $entity, $id) use ($mat) {
+                return $mat()->update($entity, (int) $id, $req->json());
+            });
+
+            $router->delete('/api/entities/{entity}/{id}', function ($req, $entity, $id) use ($mat) {
+                return $mat()->delete($entity, (int) $id);
+            });
+        }
 
         // MCP endpoint
         $router->post('/api/mcp', function ($req) use ($container) {
@@ -140,6 +187,79 @@ class AgentServiceProvider
                             'author_id' => 1,
                         ])->toArray()
                     )
+            );
+        }
+
+        // A2D tools — agent can define and manage data entities
+        if ($container->has(EntityMaterializer::class)) {
+            $mat = $container->get(EntityMaterializer::class);
+
+            $agent->addTool(
+                Tool::make('define_entity', 'Define a new data entity. Creates the database table, CRUD operations, validation, and optional search index. Use this when you need to store a new type of structured data.')
+                    ->param('entity', 'string', 'Entity name (lowercase, underscores)', true)
+                    ->param('label', 'string', 'Human-readable label')
+                    ->param('description', 'string', 'What this entity represents')
+                    ->param('fields', 'array', 'Array of field definitions: [{name, type, required, values, target}]', true)
+                    ->param('search', 'boolean', 'Enable semantic search on this entity (default false)')
+                    ->param('api', 'boolean', 'Generate REST API endpoints (default true)')
+                    ->handler(function ($entity, $label = '', $description = '', $fields = [], $search = false, $api = true) use ($mat) {
+                        $schema = new EntitySchema([
+                            'entity' => $entity, 'label' => $label,
+                            'description' => $description, 'fields' => $fields,
+                            'search' => $search, 'api' => $api,
+                        ]);
+                        return $mat->materialize($schema);
+                    })
+            );
+
+            $agent->addTool(
+                Tool::make('list_entities', 'List all defined data entities with their schemas.')
+                    ->handler(fn() => $mat->listSchemas())
+            );
+
+            $agent->addTool(
+                Tool::make('entity_insert', 'Insert a record into a data entity.')
+                    ->param('entity', 'string', 'Entity name', true)
+                    ->param('data', 'object', 'Record data as key-value pairs', true)
+                    ->handler(fn($entity, $data) => $mat->insert($entity, $data))
+            );
+
+            $agent->addTool(
+                Tool::make('entity_find', 'Find a record by ID in a data entity.')
+                    ->param('entity', 'string', 'Entity name', true)
+                    ->param('id', 'integer', 'Record ID', true)
+                    ->handler(fn($entity, $id) => $mat->find($entity, (int)$id) ?? ['error' => 'Not found'])
+            );
+
+            $agent->addTool(
+                Tool::make('entity_list', 'List records from a data entity with optional filters.')
+                    ->param('entity', 'string', 'Entity name', true)
+                    ->param('filters', 'object', 'Filter conditions as key-value pairs')
+                    ->param('limit', 'integer', 'Max records (default 50)')
+                    ->handler(fn($entity, $filters = [], $limit = 50) => $mat->findAll($entity, $filters, (int)$limit))
+            );
+
+            $agent->addTool(
+                Tool::make('entity_update', 'Update a record in a data entity.')
+                    ->param('entity', 'string', 'Entity name', true)
+                    ->param('id', 'integer', 'Record ID', true)
+                    ->param('data', 'object', 'Fields to update', true)
+                    ->handler(fn($entity, $id, $data) => $mat->update($entity, (int)$id, $data))
+            );
+
+            $agent->addTool(
+                Tool::make('entity_delete', 'Delete a record from a data entity.')
+                    ->param('entity', 'string', 'Entity name', true)
+                    ->param('id', 'integer', 'Record ID', true)
+                    ->handler(fn($entity, $id) => $mat->delete($entity, (int)$id))
+            );
+
+            $agent->addTool(
+                Tool::make('entity_search', 'Semantic search within a data entity. Only works if entity has search enabled.')
+                    ->param('entity', 'string', 'Entity name', true)
+                    ->param('query', 'string', 'Natural language search query', true)
+                    ->param('limit', 'integer', 'Max results (default 10)')
+                    ->handler(fn($entity, $query, $limit = 10) => $mat->search($entity, $query, (int)$limit))
             );
         }
     }
