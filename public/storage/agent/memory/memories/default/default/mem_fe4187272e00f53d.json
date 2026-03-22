@@ -1,0 +1,16 @@
+{
+    "id": "mem_fe4187272e00f53d",
+    "type": "memory",
+    "agentId": "default",
+    "userId": "default",
+    "content": "User prefers dark mode and uses PHP",
+    "category": "fact",
+    "tags": [
+        "preference",
+        "php"
+    ],
+    "sourceSession": null,
+    "accessCount": 0,
+    "createdAt": "2026-03-22T18:24:08+01:00",
+    "updatedAt": "2026-03-22T18:24:08+01:00"
+}

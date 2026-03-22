@@ -1,0 +1,15 @@
+{
+    "id": "skl_fc906cbbf7328c02",
+    "type": "skill",
+    "agentId": "default",
+    "content": "To deploy NoWP: composer install, configure .env, run cli/install.php, start php -S",
+    "category": "procedure",
+    "tags": [
+        "deploy",
+        "setup"
+    ],
+    "status": "active",
+    "accessCount": 0,
+    "createdAt": "2026-03-22T18:24:15+01:00",
+    "updatedAt": "2026-03-22T18:24:15+01:00"
+}

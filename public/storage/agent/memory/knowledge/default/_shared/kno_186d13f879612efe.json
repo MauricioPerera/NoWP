@@ -1,0 +1,17 @@
+{
+    "id": "kno_186d13f879612efe",
+    "type": "knowledge",
+    "agentId": "default",
+    "content": "A2D creates database entities from declarative JSON. The agent defines fields and the system materializes tables.",
+    "tags": [
+        "a2d",
+        "documentation"
+    ],
+    "source": "docs/A2-PROTOCOL-FAMILY.md",
+    "chunkIndex": null,
+    "version": null,
+    "questions": [],
+    "accessCount": 0,
+    "createdAt": "2026-03-22T18:24:22+01:00",
+    "updatedAt": "2026-03-22T18:24:22+01:00"
+}

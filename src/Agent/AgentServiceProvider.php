@@ -48,6 +48,7 @@ class AgentServiceProvider
                 $container->get(SearchService::class),
                 $config['memory_path'] ?? 'storage/agent/memory',
             );
+            $container->singleton(MemoryService::class, fn() => $memory);
         }
 
         // Build agent
@@ -105,6 +106,59 @@ class AgentServiceProvider
         $router->post('/api/agent/workflow', fn($req) => $make()->workflow($req));
         $router->post('/api/agent/memory', fn($req) => $make()->saveMemory($req));
         $router->get('/api/agent/memory', fn($req) => $make()->recallMemory($req));
+
+        // Memory management routes (RepoMemory-style)
+        if ($container->has(MemoryService::class)) {
+            $mem = fn() => $container->get(MemoryService::class);
+
+            $router->get('/api/memory/stats', function ($req) use ($mem) {
+                $agentId = $req->query('agent_id', 'default');
+                $userId = $req->query('user_id', 'default');
+                return $mem()->stats($agentId, $userId);
+            });
+
+            $router->post('/api/memory/recall', function ($req) use ($mem) {
+                $body = $req->json();
+                return $mem()->recall(
+                    $body['agent_id'] ?? 'default',
+                    $body['user_id'] ?? 'default',
+                    $body['query'] ?? '',
+                    (int) ($body['max_items'] ?? 20),
+                    (int) ($body['max_chars'] ?? 8000),
+                    $body['collections'] ?? ['memories', 'skills', 'knowledge'],
+                    $body['weights'] ?? [],
+                );
+            });
+
+            $router->post('/api/memory/memories', function ($req) use ($mem) {
+                $b = $req->json();
+                return $mem()->saveMemory($b['agent_id'] ?? 'default', $b['user_id'] ?? 'default', $b['content'] ?? '', $b['category'] ?? 'fact', $b['tags'] ?? []);
+            });
+
+            $router->post('/api/memory/skills', function ($req) use ($mem) {
+                $b = $req->json();
+                return $mem()->saveSkill($b['agent_id'] ?? 'default', $b['content'] ?? '', $b['category'] ?? 'procedure', $b['tags'] ?? []);
+            });
+
+            $router->post('/api/memory/knowledge', function ($req) use ($mem) {
+                $b = $req->json();
+                return $mem()->saveKnowledge($b['agent_id'] ?? 'default', $b['content'] ?? '', $b['tags'] ?? [], $b['source'] ?? null);
+            });
+
+            $router->post('/api/memory/sessions', function ($req) use ($mem) {
+                $b = $req->json();
+                return $mem()->saveSession($b['agent_id'] ?? 'default', $b['user_id'] ?? 'default', $b['content'] ?? '', $b['messages'] ?? []);
+            });
+
+            $router->post('/api/memory/profiles', function ($req) use ($mem) {
+                $b = $req->json();
+                return $mem()->saveProfile($b['agent_id'] ?? 'default', $b['user_id'] ?? 'default', $b['content'] ?? '', $b['metadata'] ?? []);
+            });
+
+            $router->get('/api/memory/profiles/{agentId}/{userId}', function ($req, $agentId, $userId) use ($mem) {
+                return $mem()->getProfile($agentId, $userId) ?? ['error' => 'No profile'];
+            });
+        }
         $router->post('/api/agent/reset', fn() => $make()->reset());
 
         // A2D entity endpoints (auto-generated CRUD for materialized entities)
