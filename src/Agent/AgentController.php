@@ -10,11 +10,12 @@ use Framework\Core\Request;
  * Agent REST API Controller.
  *
  * Endpoints:
- *   POST /api/agent/chat              Chat with the agent
- *   POST /api/agent/workflow           Execute a workflow
- *   POST /api/agent/memory             Save a memory
- *   GET  /api/agent/memory?q=text      Recall memories
- *   GET  /api/agent/memory/list        List all memories
+ *   GET  /api/agent/tools              List available tools with schemas
+ *   POST /api/agent/tools/{name}       Execute a tool directly
+ *   POST /api/agent/chat               Chat with the agent
+ *   POST /api/agent/workflow            Execute a workflow
+ *   POST /api/agent/memory              Save a memory
+ *   GET  /api/agent/memory?q=text       Recall memories
  */
 class AgentController
 {
@@ -109,6 +110,48 @@ class AgentController
 
         return [
             'memories' => $this->agent->recall('', 100), // TODO: use list instead
+        ];
+    }
+
+    /**
+     * GET /api/agent/tools
+     * Returns all available tools with their schemas.
+     */
+    public function listTools(): array
+    {
+        return [
+            'tools' => $this->agent->listTools(),
+            'count' => count($this->agent->listTools()),
+        ];
+    }
+
+    /**
+     * POST /api/agent/tools/{name}
+     * Execute a single tool by name.
+     * Body: {"arg1": "value1", "arg2": "value2"}
+     */
+    public function executeTool(Request $request, string $toolName): array
+    {
+        $args = $request->json() ?: [];
+
+        $tools = $this->agent->listTools();
+        $exists = false;
+        foreach ($tools as $t) {
+            if ($t['name'] === $toolName) {
+                $exists = true;
+                break;
+            }
+        }
+
+        if (!$exists) {
+            return ['error' => "Tool '{$toolName}' not found.", 'status' => 404];
+        }
+
+        $result = $this->agent->invokeToolByName($toolName, $args);
+
+        return [
+            'tool'   => $toolName,
+            'result' => $result,
         ];
     }
 

@@ -57,6 +57,8 @@ class AgentServiceProvider
     {
         $make = fn() => new AgentController($container->get(AgentService::class));
 
+        $router->get('/api/agent/tools', fn() => $make()->listTools());
+        $router->post('/api/agent/tools/{name}', fn($req, $name) => $make()->executeTool($req, $name));
         $router->post('/api/agent/chat', fn($req) => $make()->chat($req));
         $router->post('/api/agent/workflow', fn($req) => $make()->workflow($req));
         $router->post('/api/agent/memory', fn($req) => $make()->saveMemory($req));

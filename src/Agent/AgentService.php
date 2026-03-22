@@ -153,6 +153,30 @@ class AgentService
     }
 
     /**
+     * List all registered tools with their schemas.
+     */
+    public function listTools(): array
+    {
+        $tools = array_map(fn(Tool $t) => $t->toSchema(), array_values($this->tools));
+
+        $builtins = [
+            ['name' => 'remember', 'description' => 'Save a memory for future sessions.', 'parameters' => ['type' => 'object', 'properties' => ['content' => ['type' => 'string', 'description' => 'What to remember'], 'type' => ['type' => 'string', 'description' => 'Memory type: fact, preference, correction, event'], 'tags' => ['type' => 'array', 'items' => ['type' => 'string']]], 'required' => ['content']]],
+            ['name' => 'recall', 'description' => 'Recall relevant memories by semantic similarity.', 'parameters' => ['type' => 'object', 'properties' => ['query' => ['type' => 'string', 'description' => 'What to remember about'], 'limit' => ['type' => 'integer', 'description' => 'Max memories to return']], 'required' => ['query']]],
+            ['name' => 'run_workflow', 'description' => 'Execute a multi-step workflow with data store.', 'parameters' => ['type' => 'object', 'properties' => ['steps' => ['type' => 'array', 'description' => 'Workflow steps'], 'input' => ['type' => 'object', 'description' => 'Initial data']], 'required' => ['steps']]],
+        ];
+
+        return array_merge($tools, $builtins);
+    }
+
+    /**
+     * Execute a tool by name (public access for REST API).
+     */
+    public function invokeToolByName(string $name, array $args = []): mixed
+    {
+        return $this->executeTool($name, $args);
+    }
+
+    /**
      * Get chat history.
      */
     public function history(): array
