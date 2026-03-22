@@ -1,0 +1,52 @@
+{
+    "Escalado de Ticket": {
+        "id": "Escalado de Ticket",
+        "name": [
+            {
+                "id": "step1",
+                "type": "ExecuteTool",
+                "tool": "escalate_ticket",
+                "input": {
+                    "entity": "ticket"
+                }
+            }
+        ],
+        "description": "",
+        "steps": "hourly",
+        "input": null,
+        "interval": "hourly",
+        "interval_seconds": 3600,
+        "enabled": true,
+        "last_run": null,
+        "next_run": 1774203928,
+        "last_result": null,
+        "run_count": 0,
+        "error_count": 0,
+        "created_at": "2026-03-22T19:25:28+01:00"
+    },
+    "Generar Reporte": {
+        "id": "Generar Reporte",
+        "name": [
+            {
+                "id": "step1",
+                "type": "ExecuteTool",
+                "tool": "generate_report",
+                "input": {
+                    "entity": "ticket"
+                }
+            }
+        ],
+        "description": "",
+        "steps": "daily",
+        "input": null,
+        "interval": "hourly",
+        "interval_seconds": 3600,
+        "enabled": true,
+        "last_run": null,
+        "next_run": 1774203928,
+        "last_result": null,
+        "run_count": 0,
+        "error_count": 0,
+        "created_at": "2026-03-22T19:25:28+01:00"
+    }
+}

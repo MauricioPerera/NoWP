@@ -1,1 +1,1 @@
-{"version":1,"dim":384,"quant":"int8","count":1,"ids":["mem_fe4187272e00f53d"],"meta":{"mem_fe4187272e00f53d":{"category":"fact"}}}
+{"version":1,"dim":384,"quant":"int8","count":5,"ids":["mem_fe4187272e00f53d","mem_e1c1fe49d88231e1","mem_9a67e3d020a94456","mem_ed11e44895cb4b6d","mem_36dc80c0298b7375"],"meta":{"mem_fe4187272e00f53d":{"category":"fact"},"mem_e1c1fe49d88231e1":{"category":"fact"},"mem_9a67e3d020a94456":{"category":"decision"},"mem_ed11e44895cb4b6d":{"category":"fact"},"mem_36dc80c0298b7375":{"category":"decision"}}}

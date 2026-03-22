@@ -1,0 +1,17 @@
+{
+    "id": "mem_ed11e44895cb4b6d",
+    "type": "memory",
+    "agentId": "default",
+    "userId": "default",
+    "content": "PHP cannot load SQLite extensions at runtime - PDO_SQLite is sealed",
+    "category": "fact",
+    "tags": [
+        "php",
+        "sqlite",
+        "limitation"
+    ],
+    "sourceSession": null,
+    "accessCount": 0,
+    "createdAt": "2026-03-22T18:28:26+01:00",
+    "updatedAt": "2026-03-22T18:28:26+01:00"
+}

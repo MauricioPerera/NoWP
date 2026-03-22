@@ -15,10 +15,12 @@ declare(strict_types=1);
 namespace Framework\Agent\Scaffolding;
 
 use Framework\Agent\AgentService;
+use Framework\Agent\Provider\AIProviderInterface;
 
 class ScaffoldingEngine
 {
     private AgentService $agent;
+    private ?AIProviderInterface $provider = null;
     private string $state = 'idle';
     private array $context = [];
     private array $plan = [];
@@ -84,9 +86,10 @@ Current plan:
 {{plan}}
 PROMPT;
 
-    public function __construct(AgentService $agent, string $storagePath = '')
+    public function __construct(AgentService $agent, string $storagePath = '', ?AIProviderInterface $provider = null)
     {
         $this->agent = $agent;
+        $this->provider = $provider;
         $this->storagePath = $storagePath ?: (defined('BASE_PATH') ? BASE_PATH . '/storage/agent/scaffolding' : sys_get_temp_dir() . '/nowp-scaffolding');
 
         if (!is_dir($this->storagePath)) {
@@ -169,7 +172,8 @@ PROMPT;
         $prompt = str_replace('{{context}}', implode("\n", $this->context), self::DISCOVER_PROMPT);
 
         // Ask the AI to continue discovery or signal readiness
-        $response = $this->agent->chat($message);
+        $prompt = str_replace('{{context}}', implode("\n", $this->context), self::DISCOVER_PROMPT);
+        $response = $this->chatNoTools($prompt, $message);
 
         // Check if AI signals it has enough info
         if (str_contains($response, '[READY_TO_PROPOSE]') || str_contains(strtolower($message), 'that\'s all') || str_contains(strtolower($message), 'eso es todo') || str_contains(strtolower($message), 'generate') || str_contains(strtolower($message), 'genera')) {
@@ -186,9 +190,7 @@ PROMPT;
         $contextStr = implode("\n", $this->context);
         $prompt = str_replace('{{context}}', $contextStr, self::PROPOSE_PROMPT);
 
-        // Reset chat and ask for plan with special system prompt
-        $this->agent->reset();
-        $response = $this->agent->chat($prompt . "\n\nUser request: " . $message);
+        $response = $this->chatNoTools($prompt, "User request: " . $message);
 
         // Try to extract JSON plan from response
         $plan = $this->extractJson($response);
@@ -221,8 +223,7 @@ PROMPT;
         $planStr = json_encode($this->plan, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);
         $prompt = str_replace('{{plan}}', $planStr, self::REFINE_PROMPT);
 
-        $this->agent->reset();
-        $response = $this->agent->chat($prompt . "\n\nUser change request: " . $message);
+        $response = $this->chatNoTools($prompt, "User change request: " . $message);
 
         // Try to extract updated plan
         $updated = $this->extractJson($response);
@@ -351,6 +352,25 @@ PROMPT;
     }
 
     // ── Helpers ──────────────────────────────────────────────────
+
+    /**
+     * Chat without tools — avoids tool call loops during scaffolding.
+     */
+    private function chatNoTools(string $systemPrompt, string $userMessage): string
+    {
+        if ($this->provider) {
+            $response = $this->provider->chat(
+                [['role' => 'user', 'content' => $userMessage]],
+                $systemPrompt,
+                [], // no tools
+            );
+            return $response['content'] ?? '';
+        }
+
+        // Fallback to agent (may use tools)
+        $this->agent->reset();
+        return $this->agent->chat($userMessage);
+    }
 
     private function extractJson(string $text): ?array
     {

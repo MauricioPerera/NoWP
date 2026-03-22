@@ -1,0 +1,17 @@
+{
+    "id": "kno_6d415023fdd31581",
+    "type": "knowledge",
+    "agentId": "default",
+    "content": "php-vector-store uses Int8 quantization: 768 floats compressed to 768 bytes. 100% recall at 42 vectors, <5ms search.",
+    "tags": [
+        "vector-store",
+        "performance"
+    ],
+    "source": "benchmarks",
+    "chunkIndex": null,
+    "version": null,
+    "questions": [],
+    "accessCount": 0,
+    "createdAt": "2026-03-22T18:30:30+01:00",
+    "updatedAt": "2026-03-22T18:30:30+01:00"
+}

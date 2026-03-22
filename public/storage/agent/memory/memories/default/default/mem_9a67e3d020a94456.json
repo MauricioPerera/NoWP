@@ -1,0 +1,16 @@
+{
+    "id": "mem_9a67e3d020a94456",
+    "type": "memory",
+    "agentId": "default",
+    "userId": "default",
+    "content": "Decided to use Matryoshka embeddings with 3 stages: 128, 256, 384",
+    "category": "decision",
+    "tags": [
+        "vectors",
+        "embeddings"
+    ],
+    "sourceSession": null,
+    "accessCount": 0,
+    "createdAt": "2026-03-22T18:28:17+01:00",
+    "updatedAt": "2026-03-22T18:28:17+01:00"
+}

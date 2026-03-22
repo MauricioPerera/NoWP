@@ -38,5 +38,31 @@
             "expect_status": 200
         },
         "created_at": "2026-03-22T17:11:24+01:00"
+    },
+    "email": {
+        "name": "email",
+        "label": "Servicio de Correo",
+        "base_url": "https://api.example.com/email",
+        "auth": {
+            "type": "bearer",
+            "key_env": "",
+            "key": "",
+            "header": "Authorization",
+            "prefix": "Bearer",
+            "query_param": "api_key"
+        },
+        "endpoints": [
+            {
+                "name": "enviar_correo",
+                "description": "Call enviar_correo",
+                "method": "POST",
+                "path": "/enviar-correo",
+                "params": [],
+                "body": [],
+                "response_path": ""
+            }
+        ],
+        "test": [],
+        "created_at": "2026-03-22T19:25:28+01:00"
     }
 }

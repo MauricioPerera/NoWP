@@ -1,0 +1,16 @@
+{
+    "id": "mem_e1c1fe49d88231e1",
+    "type": "memory",
+    "agentId": "default",
+    "userId": "default",
+    "content": "The project uses MIT license",
+    "category": "fact",
+    "tags": [
+        "license",
+        "legal"
+    ],
+    "sourceSession": null,
+    "accessCount": 0,
+    "createdAt": "2026-03-22T18:28:09+01:00",
+    "updatedAt": "2026-03-22T18:28:09+01:00"
+}

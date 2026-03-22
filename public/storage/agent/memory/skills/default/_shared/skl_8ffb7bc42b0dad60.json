@@ -1,0 +1,15 @@
+{
+    "id": "skl_8ffb7bc42b0dad60",
+    "type": "skill",
+    "agentId": "default",
+    "content": "To test A2T: POST /api/agent/tools/run_tests with suite name and tests array",
+    "category": "procedure",
+    "tags": [
+        "testing",
+        "a2t"
+    ],
+    "status": "active",
+    "accessCount": 0,
+    "createdAt": "2026-03-22T18:30:09+01:00",
+    "updatedAt": "2026-03-22T18:30:09+01:00"
+}

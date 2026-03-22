@@ -140,7 +140,8 @@ class AgentService
     public function remember(string $content, string $type = 'fact', array $tags = []): ?string
     {
         if (!$this->memory) return null;
-        return $this->memory->save($this->agentId, $content, $type, $tags);
+        $result = $this->memory->saveMemory($this->agentId, 'default', $content, $type, $tags);
+        return $result['id'] ?? null;
     }
 
     /**
@@ -149,7 +150,7 @@ class AgentService
     public function recall(string $query, int $limit = 5): array
     {
         if (!$this->memory) return [];
-        return $this->memory->recall($this->agentId, $query, $limit);
+        return $this->memory->simpleRecall($this->agentId, $query, $limit);
     }
 
     /**
@@ -224,14 +225,12 @@ class AgentService
     {
         $prompt = $this->systemPrompt;
 
-        // Inject relevant memories
+        // Inject relevant memories via unified recall
         if ($this->memory) {
-            $memories = $this->memory->recall($this->agentId, $currentMessage, 3);
-            if (!empty($memories)) {
-                $prompt .= "\n\n## Relevant memories from previous sessions:\n";
-                foreach ($memories as $m) {
-                    $prompt .= "- [{$m['type']}] {$m['content']}\n";
-                }
+            $context = $this->memory->recall($this->agentId, 'default', $currentMessage, 5, 4000);
+            $formatted = $context['formatted'] ?? '';
+            if (!empty($formatted)) {
+                $prompt .= "\n\n" . $formatted;
             }
         }
 

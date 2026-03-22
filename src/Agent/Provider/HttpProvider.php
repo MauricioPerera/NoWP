@@ -38,17 +38,32 @@ class HttpProvider implements AIProviderInterface
             ], $tools);
         }
 
-        $response = @file_get_contents($this->url, false,
-            stream_context_create(['http' => [
-                'method'  => 'POST',
-                'header'  => "Content-Type: application/json\r\nAuthorization: Bearer {$this->apiKey}",
-                'content' => json_encode($payload),
-                'timeout' => 120,
-            ]])
-        );
+        $ch = curl_init($this->url);
+        curl_setopt_array($ch, [
+            CURLOPT_POST           => true,
+            CURLOPT_POSTFIELDS     => json_encode($payload),
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_HTTPHEADER     => [
+                'Content-Type: application/json',
+                'Authorization: Bearer ' . $this->apiKey,
+            ],
+            CURLOPT_TIMEOUT        => 120,
+            CURLOPT_SSL_VERIFYPEER => true,
+        ]);
 
-        if (false === $response) {
-            throw new \RuntimeException("AI API request failed to {$this->url}");
+        $response = curl_exec($ch);
+        $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        $error = curl_error($ch);
+        curl_close($ch);
+
+        if (false === $response || !empty($error)) {
+            throw new \RuntimeException("AI API request failed to {$this->url}: {$error}");
+        }
+
+        if ($httpCode >= 400) {
+            $errData = json_decode($response, true);
+            $msg = $errData['errors'][0]['message'] ?? $errData['error']['message'] ?? "HTTP {$httpCode}";
+            throw new \RuntimeException("AI API error: {$msg}");
         }
 
         $data    = json_decode($response, true);
@@ -67,6 +82,42 @@ class HttpProvider implements AIProviderInterface
         if ($systemPrompt) {
             $result[] = ['role' => 'system', 'content' => $systemPrompt];
         }
-        return array_merge($result, $messages);
+
+        // Clean messages: ensure content is always a string, remove tool-specific fields
+        foreach ($messages as $msg) {
+            $clean = ['role' => $msg['role'] ?? 'user'];
+
+            // Ensure content is a string
+            $content = $msg['content'] ?? '';
+            if (is_array($content)) {
+                $content = json_encode($content);
+            }
+            if ($content === null || $content === '') {
+                // Skip messages with no content (e.g., tool_calls-only assistant messages)
+                // unless they have tool_calls
+                if (!empty($msg['tool_calls'])) {
+                    $clean['content'] = '';
+                    $clean['tool_calls'] = $msg['tool_calls'];
+                    $result[] = $clean;
+                    continue;
+                }
+                // Skip empty messages
+                continue;
+            }
+
+            $clean['content'] = (string) $content;
+
+            // Pass through tool_call_id for tool response messages
+            if (isset($msg['tool_call_id'])) {
+                $clean['tool_call_id'] = $msg['tool_call_id'];
+            }
+            if (isset($msg['tool_calls'])) {
+                $clean['tool_calls'] = $msg['tool_calls'];
+            }
+
+            $result[] = $clean;
+        }
+
+        return $result;
     }
 }

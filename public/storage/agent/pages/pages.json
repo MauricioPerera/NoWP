@@ -99,60 +99,16 @@
     },
     "tickets": {
         "slug": "tickets",
-        "title": "All Tickets",
+        "title": "Tickets",
         "description": "",
         "template": "list-page",
         "layout": "admin-sidebar",
         "sections": [
             {
-                "slot": "header",
-                "component": "heading",
-                "props": {
-                    "content": "Support Tickets",
-                    "level": 1
-                }
-            },
-            {
-                "slot": "actions",
-                "component": "button-group",
-                "props": {
-                    "buttons": [
-                        {
-                            "label": "New Ticket",
-                            "action": "navigate",
-                            "to": "/tickets/new",
-                            "variant": "primary"
-                        },
-                        {
-                            "label": "Refresh",
-                            "action": "reload",
-                            "variant": "secondary"
-                        }
-                    ]
-                }
-            },
-            {
                 "slot": "main",
                 "component": "data-table",
                 "props": {
-                    "source": {
-                        "tool": "entity_list",
-                        "args": {
-                            "entity": "ticket"
-                        }
-                    },
-                    "columns": [
-                        "id",
-                        "subject",
-                        "priority",
-                        "status",
-                        "customer_email",
-                        "created_at"
-                    ],
-                    "row_actions": [
-                        "edit",
-                        "delete"
-                    ]
+                    "entity": "ticket"
                 }
             }
         ],
@@ -160,7 +116,7 @@
             "required": true
         },
         "nav": null,
-        "created_at": "2026-03-22T17:16:03+01:00"
+        "created_at": "2026-03-22T19:25:28+01:00"
     },
     "tickets-new": {
         "slug": "tickets-new",
@@ -589,5 +545,47 @@
         },
         "nav": null,
         "created_at": "2026-03-22T17:49:28+01:00"
+    },
+    "crear-ticket": {
+        "slug": "crear-ticket",
+        "title": "Crear Ticket",
+        "description": "",
+        "template": "form-page",
+        "layout": "public-centered",
+        "sections": [
+            {
+                "slot": "main",
+                "component": "form",
+                "props": {
+                    "entity": "ticket"
+                }
+            }
+        ],
+        "auth": {
+            "required": false
+        },
+        "nav": null,
+        "created_at": "2026-03-22T19:25:28+01:00"
+    },
+    "reportes": {
+        "slug": "reportes",
+        "title": "Reportes",
+        "description": "",
+        "template": "dashboard",
+        "layout": "admin-sidebar",
+        "sections": [
+            {
+                "slot": "main",
+                "component": "stat-cards",
+                "props": {
+                    "entity": "ticket"
+                }
+            }
+        ],
+        "auth": {
+            "required": true
+        },
+        "nav": null,
+        "created_at": "2026-03-22T19:25:28+01:00"
     }
 }

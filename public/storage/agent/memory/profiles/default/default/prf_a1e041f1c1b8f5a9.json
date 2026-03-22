@@ -1,0 +1,18 @@
+{
+    "id": "prf_a1e041f1c1b8f5a9",
+    "type": "profile",
+    "agentId": "default",
+    "userId": "default",
+    "content": "Senior developer, focused on PHP and WordPress ecosystems. Building NoWP as alternative CMS with agentic capabilities. Prefers practical over theoretical.",
+    "metadata": {
+        "role": "developer",
+        "expertise": [
+            "php",
+            "wordpress",
+            "ai"
+        ],
+        "language": "es"
+    },
+    "createdAt": "2026-03-22T18:30:48+01:00",
+    "updatedAt": "2026-03-22T18:30:48+01:00"
+}

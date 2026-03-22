@@ -87,7 +87,7 @@ class AgentServiceProvider
 
         // Build Scaffolding Engine (conversational system builder)
         $scaffoldPath = $config['scaffolding_path'] ?? 'storage/agent/scaffolding';
-        $scaffolding = new Scaffolding\ScaffoldingEngine($agent, $scaffoldPath);
+        $scaffolding = new Scaffolding\ScaffoldingEngine($agent, $scaffoldPath, $provider);
         $container->singleton(Scaffolding\ScaffoldingEngine::class, fn() => $scaffolding);
 
         // Register built-in tools (AFTER all A2 components are in the container)

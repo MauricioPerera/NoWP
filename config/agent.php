@@ -43,6 +43,13 @@ return [
             'temperature' => 0.7,
             'max_tokens'  => 4096,
         ],
+        'cloudflare' => [
+            'url'         => 'https://api.cloudflare.com/client/v4/accounts/' . env('CF_ACCOUNT_ID', '') . '/ai/v1/chat/completions',
+            'api_key'     => env('CF_AI_API_KEY', ''),
+            'model'       => env('CF_AI_MODEL', '@cf/meta/llama-3.3-70b-instruct-fp8-fast'),
+            'temperature' => 0.7,
+            'max_tokens'  => 4096,
+        ],
         'custom' => [
             'url'         => env('AGENT_API_URL', ''),
             'api_key'     => env('AGENT_API_KEY', ''),

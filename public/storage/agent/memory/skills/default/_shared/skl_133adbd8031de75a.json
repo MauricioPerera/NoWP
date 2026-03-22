@@ -1,0 +1,15 @@
+{
+    "id": "skl_133adbd8031de75a",
+    "type": "skill",
+    "agentId": "default",
+    "content": "To create an entity: POST /api/entities with entity name, label, and fields array. Each field has name, type, required, values.",
+    "category": "procedure",
+    "tags": [
+        "a2d",
+        "entities"
+    ],
+    "status": "active",
+    "accessCount": 0,
+    "createdAt": "2026-03-22T18:30:18+01:00",
+    "updatedAt": "2026-03-22T18:30:18+01:00"
+}

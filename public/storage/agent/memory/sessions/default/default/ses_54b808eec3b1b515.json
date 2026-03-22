@@ -1,0 +1,27 @@
+{
+    "id": "ses_54b808eec3b1b515",
+    "type": "session",
+    "agentId": "default",
+    "userId": "default",
+    "content": "User asked about vector search in PHP. Discussed sqlite-vec limitations. Decided to build php-vector-store.",
+    "messages": [
+        {
+            "role": "user",
+            "content": "Can I use sqlite-vec in PHP?"
+        },
+        {
+            "role": "assistant",
+            "content": "No, PHP PDO_SQLite is sealed. I built php-vector-store instead."
+        },
+        {
+            "role": "user",
+            "content": "Perfect, that solves the problem."
+        }
+    ],
+    "mined": false,
+    "conversationId": null,
+    "startedAt": "2026-03-22T18:30:48+01:00",
+    "endedAt": null,
+    "createdAt": "2026-03-22T18:30:48+01:00",
+    "updatedAt": "2026-03-22T18:30:48+01:00"
+}

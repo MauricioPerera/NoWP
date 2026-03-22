@@ -1,0 +1,17 @@
+{
+    "id": "kno_9fbf3768adfb32a6",
+    "type": "knowledge",
+    "agentId": "default",
+    "content": "NoWP A2 protocols: A2I (integrations), A2D (data), A2E (execution), A2T (testing), A2P (pages). All use bounded non-determinism.",
+    "tags": [
+        "a2",
+        "architecture"
+    ],
+    "source": "docs/A2-PROTOCOL-FAMILY.md",
+    "chunkIndex": null,
+    "version": null,
+    "questions": [],
+    "accessCount": 0,
+    "createdAt": "2026-03-22T18:30:41+01:00",
+    "updatedAt": "2026-03-22T18:30:41+01:00"
+}

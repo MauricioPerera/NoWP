@@ -1,0 +1,16 @@
+{
+    "id": "mem_36dc80c0298b7375",
+    "type": "memory",
+    "agentId": "default",
+    "userId": "default",
+    "content": "User wants bounded non-determinism: LLM decides WHAT, system decides HOW",
+    "category": "decision",
+    "tags": [
+        "architecture",
+        "a2"
+    ],
+    "sourceSession": null,
+    "accessCount": 0,
+    "createdAt": "2026-03-22T18:28:34+01:00",
+    "updatedAt": "2026-03-22T18:28:34+01:00"
+}
