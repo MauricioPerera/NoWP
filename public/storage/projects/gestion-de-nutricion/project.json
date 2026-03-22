@@ -1,0 +1,8 @@
+{
+    "id": "gestion-de-nutricion",
+    "name": "Gestion de nutricion",
+    "description": "Una aplicacion simpple para que las personas ingresen sus preferencias nutricionales y tablas nutricionales de productos apra saber cuales son mas afines",
+    "status": "active",
+    "createdAt": "2026-03-22T19:57:23+01:00",
+    "updatedAt": "2026-03-22T19:57:23+01:00"
+}

@@ -324,8 +324,37 @@ class AgentServiceProvider
                 return $pm()->get($id) ?? ['error' => 'Not found'];
             });
 
-            $router->post('/api/projects/{id}/activate', function ($req, $id) use ($pm) {
-                return $pm()->activate($id);
+            $router->post('/api/projects/{id}/activate', function ($req, $id) use ($pm, $container) {
+                $result = $pm()->activate($id);
+                if (isset($result['error'])) return $result;
+
+                // Rebind all project-scoped services to new project paths
+                $paths = $pm()->activePaths();
+                $agent = $container->get(AgentService::class);
+
+                // Scaffolding
+                if ($container->has(Scaffolding\ScaffoldingEngine::class)) {
+                    $provider = null;
+                    try {
+                        $ref = new \ReflectionProperty(Scaffolding\ScaffoldingEngine::class, 'provider');
+                        $ref->setAccessible(true);
+                        $provider = $ref->getValue($container->get(Scaffolding\ScaffoldingEngine::class));
+                    } catch (\Throwable $e) {}
+                    $container->instance(Scaffolding\ScaffoldingEngine::class, new Scaffolding\ScaffoldingEngine($agent, $paths['scaffolding'], $provider));
+                }
+
+                // PageBuilder
+                $container->instance(PageBuilder::class, new PageBuilder($paths['pages'], $agent));
+
+                // IntegrationManager
+                $container->instance(IntegrationManager::class, new IntegrationManager($paths['integrations']));
+
+                // Scheduler
+                if ($container->has(WorkflowEngine::class)) {
+                    $container->instance(Scheduler::class, new Scheduler($container->get(WorkflowEngine::class), $paths['schedules']));
+                }
+
+                return $result;
             });
 
             $router->put('/api/projects/{id}', function ($req, $id) use ($pm) {
@@ -338,11 +367,25 @@ class AgentServiceProvider
             });
         }
 
-        // Builder dashboard endpoint — aggregates all system status
+        // Builder dashboard endpoint — reads from active project storage
         $router->get('/api/builder/status', function () use ($container) {
             $status = ['timestamp' => date('c')];
 
-            // Entities
+            // Determine paths: project-specific or global
+            $paths = null;
+            if ($container->has(Project\ProjectManager::class)) {
+                $pm = $container->get(Project\ProjectManager::class);
+                $paths = $pm->activePaths();
+                $status['project'] = $pm->activeId();
+            }
+
+            $pagesPath = $paths ? $paths['pages'] : 'storage/agent/pages';
+            $servicesPath = $paths ? $paths['integrations'] : 'storage/agent/integrations';
+            $schedulesPath = $paths ? $paths['schedules'] : 'storage/agent/schedules';
+            $memoryPath = $paths ? $paths['memory'] : 'storage/agent/memory';
+            $scaffoldPath = $paths ? $paths['scaffolding'] : 'storage/agent/scaffolding';
+
+            // Entities — always from DB (shared), filter by project context
             if ($container->has(EntityMaterializer::class)) {
                 $schemas = $container->get(EntityMaterializer::class)->listSchemas();
                 $entities = [];
@@ -354,30 +397,72 @@ class AgentServiceProvider
                 $status['entities'] = $entities;
             }
 
-            // Pages
-            if ($container->has(PageBuilder::class)) {
-                $status['pages'] = $container->get(PageBuilder::class)->list();
+            // Pages — from project storage
+            $pagesFile = $pagesPath . '/pages.json';
+            if (file_exists($pagesFile)) {
+                $pages = json_decode(file_get_contents($pagesFile), true) ?: [];
+                $status['pages'] = array_map(fn($p) => [
+                    'slug'     => $p['slug'] ?? '',
+                    'title'    => $p['title'] ?? '',
+                    'template' => $p['template'] ?? '',
+                    'layout'   => $p['layout'] ?? '',
+                    'sections' => count($p['sections'] ?? []),
+                    'auth'     => $p['auth']['required'] ?? false,
+                ], array_values($pages));
+            } else {
+                $status['pages'] = [];
             }
 
-            // Services
-            if ($container->has(IntegrationManager::class)) {
-                $services = $container->get(IntegrationManager::class)->listServices();
-                $status['services'] = is_array($services) ? array_values($services) : [];
+            // Services — from project storage
+            $servicesFile = $servicesPath . '/services.json';
+            if (file_exists($servicesFile)) {
+                $services = json_decode(file_get_contents($servicesFile), true) ?: [];
+                $status['services'] = array_values($services);
+            } else {
+                $status['services'] = [];
             }
 
-            // Schedules
-            if ($container->has(Scheduler::class)) {
-                $status['schedules'] = $container->get(Scheduler::class)->list();
+            // Schedules — from project storage
+            $schedulesFile = $schedulesPath . '/schedules.json';
+            if (file_exists($schedulesFile)) {
+                $schedules = json_decode(file_get_contents($schedulesFile), true) ?: [];
+                $status['schedules'] = array_values($schedules);
+            } else {
+                $status['schedules'] = [];
             }
 
-            // Memory
-            if ($container->has(MemoryService::class)) {
-                $status['memory'] = $container->get(MemoryService::class)->stats('default', 'default');
+            // Memory — count files in project memory dirs
+            $memStats = ['memories' => 0, 'skills' => 0, 'knowledge' => 0, 'sessions' => 0, 'profile' => false];
+            foreach (['memories', 'skills', 'knowledge', 'sessions'] as $col) {
+                $dir = $memoryPath . '/' . $col;
+                if (is_dir($dir)) {
+                    $iter = new \RecursiveIteratorIterator(new \RecursiveDirectoryIterator($dir, \FilesystemIterator::SKIP_DOTS));
+                    foreach ($iter as $f) {
+                        if ($f->getExtension() === 'json') $memStats[$col]++;
+                    }
+                }
             }
+            $profileDir = $memoryPath . '/profiles';
+            if (is_dir($profileDir)) {
+                $iter = new \RecursiveIteratorIterator(new \RecursiveDirectoryIterator($profileDir, \FilesystemIterator::SKIP_DOTS));
+                foreach ($iter as $f) {
+                    if ($f->getExtension() === 'json') { $memStats['profile'] = true; break; }
+                }
+            }
+            $status['memory'] = $memStats;
 
-            // Scaffolding
-            if ($container->has(Scaffolding\ScaffoldingEngine::class)) {
-                $status['scaffold'] = $container->get(Scaffolding\ScaffoldingEngine::class)->status();
+            // Scaffolding — from project storage
+            $scaffoldFile = $scaffoldPath . '/session.json';
+            if (file_exists($scaffoldFile)) {
+                $scaff = json_decode(file_get_contents($scaffoldFile), true) ?: [];
+                $status['scaffold'] = [
+                    'state'   => $scaff['state'] ?? 'idle',
+                    'plan'    => $scaff['plan'] ?? [],
+                    'context' => $scaff['context'] ?? [],
+                    'history' => count($scaff['history'] ?? []),
+                ];
+            } else {
+                $status['scaffold'] = ['state' => 'idle', 'plan' => [], 'context' => [], 'history' => 0];
             }
 
             // Tools count
