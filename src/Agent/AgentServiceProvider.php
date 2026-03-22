@@ -9,6 +9,8 @@ use Framework\Agent\Provider\HttpProvider;
 use Framework\Agent\Tools\Tool;
 use Framework\Agent\Workflow\WorkflowEngine;
 use Framework\Agent\Memory\MemoryService;
+use Framework\Agent\MCP\MCPServer;
+use Framework\Agent\MCP\MCPController;
 use Framework\Core\Container;
 use Framework\Core\Router;
 use Framework\Search\SearchService;
@@ -64,6 +66,14 @@ class AgentServiceProvider
         $router->post('/api/agent/memory', fn($req) => $make()->saveMemory($req));
         $router->get('/api/agent/memory', fn($req) => $make()->recallMemory($req));
         $router->post('/api/agent/reset', fn() => $make()->reset());
+
+        // MCP endpoint
+        $router->post('/api/mcp', function ($req) use ($container) {
+            $mcp = new MCPController(
+                new MCPServer($container->get(AgentService::class))
+            );
+            return $mcp->handle($req);
+        });
     }
 
     private static function createProvider(array $config): Provider\AIProviderInterface

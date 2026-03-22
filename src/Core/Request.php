@@ -258,6 +258,22 @@ class Request
     }
 
     /**
+     * Get the raw request body as string.
+     */
+    public function rawBody(): string
+    {
+        return file_get_contents('php://input') ?: json_encode($this->body);
+    }
+
+    /**
+     * Get body as parsed JSON array.
+     */
+    public function json(): array
+    {
+        return $this->body;
+    }
+
+    /**
      * Get all input (query + body)
      * 
      * @return array<string, mixed>
