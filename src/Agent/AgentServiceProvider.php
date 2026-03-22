@@ -84,6 +84,11 @@ class AgentServiceProvider
         $pageBuilder = new PageBuilder($pagePath, $agent);
         $container->singleton(PageBuilder::class, fn() => $pageBuilder);
 
+        // Build Scaffolding Engine (conversational system builder)
+        $scaffoldPath = $config['scaffolding_path'] ?? 'storage/agent/scaffolding';
+        $scaffolding = new Scaffolding\ScaffoldingEngine($agent, $scaffoldPath);
+        $container->singleton(Scaffolding\ScaffoldingEngine::class, fn() => $scaffolding);
+
         // Register built-in tools (AFTER all A2 components are in the container)
         self::registerBuiltinTools($agent, $container, $config);
 
@@ -227,6 +232,22 @@ class AgentServiceProvider
                 $runner = $container->get(TestRunner::class);
                 return $runner->run($body);
             });
+        }
+
+        // Scaffolding endpoints (conversational system builder)
+        if ($container->has(Scaffolding\ScaffoldingEngine::class)) {
+            $scaff = fn() => $container->get(Scaffolding\ScaffoldingEngine::class);
+
+            $router->post('/api/scaffold', function ($req) use ($scaff) {
+                $body = $req->json();
+                $message = $body['message'] ?? '';
+                if (empty($message)) return ['error' => 'Message is required'];
+                return $scaff()->process($message);
+            });
+
+            $router->get('/api/scaffold', fn() => $scaff()->status());
+
+            $router->post('/api/scaffold/reset', fn() => $scaff()->reset());
         }
 
         // MCP endpoint
