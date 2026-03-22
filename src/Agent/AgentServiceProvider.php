@@ -16,6 +16,7 @@ use Framework\Agent\Data\EntityMaterializer;
 use Framework\Agent\Testing\TestRunner;
 use Framework\Agent\Integration\ServiceDefinition;
 use Framework\Agent\Integration\IntegrationManager;
+use Framework\Agent\Workflow\Scheduler;
 use Framework\Core\Container;
 use Framework\Core\Router;
 use Framework\Search\SearchService;
@@ -73,6 +74,11 @@ class AgentServiceProvider
         $integrations->bootTools($agent); // re-register tools from stored services
         $container->singleton(IntegrationManager::class, fn() => $integrations);
 
+        // Build Scheduler (pseudo-cron for autonomous workflows)
+        $schedulerPath = $config['scheduler_path'] ?? 'storage/agent/schedules';
+        $scheduler = new Scheduler($workflow, $schedulerPath);
+        $container->singleton(Scheduler::class, fn() => $scheduler);
+
         $container->singleton(AgentService::class, fn() => $agent);
     }
 
@@ -120,6 +126,36 @@ class AgentServiceProvider
 
             $router->delete('/api/entities/{entity}/{id}', function ($req, $entity, $id) use ($mat) {
                 return $mat()->delete($entity, (int) $id);
+            });
+        }
+
+        // Scheduler endpoints + pseudo-cron tick
+        if ($container->has(Scheduler::class)) {
+            $sched = fn() => $container->get(Scheduler::class);
+
+            $router->get('/api/schedules', fn() => $sched()->list());
+
+            $router->post('/api/schedules', function ($req) use ($sched) {
+                return $sched()->schedule($req->json());
+            });
+
+            $router->delete('/api/schedules/{id}', function ($req, $id) use ($sched) {
+                return $sched()->unschedule($id);
+            });
+
+            $router->get('/api/schedules/{id}/history', function ($req, $id) use ($sched) {
+                return $sched()->history($id, (int) $req->query('limit', 20));
+            });
+
+            $router->post('/api/cron/tick', fn() => $sched()->tick());
+
+            // Pseudo-cron: tick on every request (lightweight check)
+            register_shutdown_function(function () use ($sched) {
+                try {
+                    $sched()->tick();
+                } catch (\Throwable) {
+                    // Never break the main request
+                }
             });
         }
 
@@ -356,6 +392,52 @@ class AgentServiceProvider
                         if (!$def) return ['error' => "Service '{$service}' not found"];
                         return $intMgr->testConnection($def);
                     })
+            );
+        }
+
+        // Scheduler tools — autonomous workflow execution
+        if ($container->has(Scheduler::class)) {
+            $sched = $container->get(Scheduler::class);
+
+            $agent->addTool(
+                Tool::make('schedule_workflow', 'Schedule a workflow to run automatically on an interval. Makes the agent autonomous — it can act without being asked.')
+                    ->param('id', 'string', 'Schedule ID (unique name)')
+                    ->param('name', 'string', 'Human-readable name', true)
+                    ->param('steps', 'array', 'Workflow steps to execute', true)
+                    ->param('interval', 'string', 'Interval: every_minute, every_5min, hourly, daily, weekly, or Nm/Nh/Nd', true)
+                    ->param('input', 'object', 'Initial data for each run')
+                    ->param('enabled', 'boolean', 'Start immediately (default true)')
+                    ->handler(fn($id = null, $name = '', $steps = [], $interval = 'hourly', $input = null, $enabled = true) =>
+                        $sched->schedule([
+                            'id' => $id, 'name' => $name, 'steps' => $steps,
+                            'interval' => $interval, 'input' => $input, 'enabled' => $enabled,
+                        ])
+                    )
+            );
+
+            $agent->addTool(
+                Tool::make('list_schedules', 'List all scheduled workflows with their status and next run time.')
+                    ->handler(fn() => $sched->list())
+            );
+
+            $agent->addTool(
+                Tool::make('unschedule_workflow', 'Stop and remove a scheduled workflow.')
+                    ->param('id', 'string', 'Schedule ID to remove', true)
+                    ->handler(fn($id) => $sched->unschedule($id))
+            );
+
+            $agent->addTool(
+                Tool::make('pause_schedule', 'Pause or resume a scheduled workflow.')
+                    ->param('id', 'string', 'Schedule ID', true)
+                    ->param('enabled', 'boolean', 'true to resume, false to pause', true)
+                    ->handler(fn($id, $enabled) => $sched->setEnabled($id, (bool)$enabled))
+            );
+
+            $agent->addTool(
+                Tool::make('schedule_history', 'Get execution history for a scheduled workflow.')
+                    ->param('id', 'string', 'Schedule ID', true)
+                    ->param('limit', 'integer', 'Max entries (default 20)')
+                    ->handler(fn($id, $limit = 20) => $sched->history($id, (int)$limit))
             );
         }
     }
