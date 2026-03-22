@@ -569,8 +569,9 @@ class TestRunner
                 // Normalize: remove leading # or /
                 $target = ltrim($value, '#/');
                 $target = str_replace('/', '-', $target);
-                // Skip external URLs and API endpoints
+                // Skip external URLs, API endpoints, and unresolved placeholders
                 if (str_starts_with($value, 'http') || str_starts_with($value, '/api/')) continue;
+                if (str_contains($target, '{{')) continue; // dynamic param, resolved at runtime
                 if (!in_array($target, $knownSlugs, true)) {
                     $broken[] = "{$context}:{$key}='{$value}' (page '{$target}' not found)";
                 }

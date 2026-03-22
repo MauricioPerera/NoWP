@@ -300,11 +300,22 @@ h2 { font-size: 18px; margin-bottom: 16px; }
 
 <script>
 const API = '';
-let currentPage = (location.hash.slice(1) || 'ticket-dashboard').replace(/\//g, '-');
+
+function parseHash(hash) {
+  const raw = (hash || '#ticket-dashboard').slice(1);
+  const [path, qs] = raw.split('?');
+  const slug = path.replace(/\//g, '-');
+  const params = new URLSearchParams(qs || '');
+  return { slug, params: Object.fromEntries(params) };
+}
+
+let { slug: currentPage, params: currentParams } = parseHash(location.hash);
 
 // Render engine
-async function renderPage(slug) {
-  const res = await fetch(`${API}/api/pages/${slug}`);
+async function renderPage(slug, params = {}) {
+  const qs = new URLSearchParams(params).toString();
+  const url = qs ? `${API}/api/pages/${slug}?${qs}` : `${API}/api/pages/${slug}`;
+  const res = await fetch(url);
   if (!res.ok) {
     document.getElementById('app').innerHTML = `<div class="layout-public-centered"><div class="centered-card"><h1>404</h1><p>Page not found: ${slug}</p></div></div>`;
     return;
@@ -365,8 +376,11 @@ function renderComponent(type, props) {
     case 'button-group':
       return `<div class="button-group">${props.buttons.map(b => {
         const cls = b.variant === 'primary' ? 'btn btn-primary' : 'btn';
-        if (b.action === 'navigate') return `<a href="#${b.to.replace(/^\//,'').replace(/\//g,'-')}" class="${cls}">${b.label}</a>`;
-        if (b.action === 'reload') return `<button class="${cls}" onclick="renderPage(currentPage)">${b.label}</button>`;
+        if (b.action === 'navigate') {
+          const to = b.to.replace(/^\//,'').replace(/\//g,'-');
+          return `<a href="#${to}" class="${cls}">${b.label}</a>`;
+        }
+        if (b.action === 'reload') return `<button class="${cls}" onclick="renderPage(currentPage, currentParams)">${b.label}</button>`;
         return `<button class="${cls}">${b.label}</button>`;
       }).join('')}</div>`;
 
@@ -379,22 +393,36 @@ function renderComponent(type, props) {
         const cols = props.columns || Object.keys(rows[0]);
         const entity = props.source?.args?.entity;
         const hasActions = !!entity && (props.row_actions || []).includes('delete');
+        const clickable = !!entity && rows[0]?.id !== undefined;
         return `<table class="data-table">
           <thead><tr>${cols.map(c => `<th>${c}</th>`).join('')}${hasActions ? '<th>Actions</th>' : ''}</tr></thead>
-          <tbody>${rows.map(row => `<tr>${cols.map(c => `<td>${formatCell(c, row[c])}</td>`).join('')}
-            ${hasActions ? `<td><button class="btn-danger" onclick="deleteRecord('${entity}', ${row.id})">Delete</button></td>` : ''}
+          <tbody>${rows.map(row => `<tr ${clickable ? `style="cursor:pointer" onclick="location.hash='${entity}-detail?id=${row.id}'"` : ''}>${cols.map(c => `<td>${formatCell(c, row[c])}</td>`).join('')}
+            ${hasActions ? `<td><button class="btn-danger" onclick="event.stopPropagation();deleteRecord('${entity}', ${row.id})">Delete</button></td>` : ''}
           </tr>`).join('')}</tbody>
         </table>`;
       }
       if (rows && rows.length === 0) return '<div class="loading" style="color:var(--text-muted)">No records found.</div>';
       return '<div class="loading">Loading data...</div>';
 
+    case 'detail-view':
+      if (props.data && typeof props.data === 'object' && !Array.isArray(props.data)) {
+        const fields = props.fields || Object.keys(props.data);
+        return `<div class="detail-view" style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden">
+          ${fields.map(f => `<div style="display:grid;grid-template-columns:180px 1fr;border-bottom:1px solid var(--border)">
+            <div style="padding:12px 16px;background:var(--surface2);font-size:12px;text-transform:uppercase;letter-spacing:0.05em;color:var(--text-muted)">${f}</div>
+            <div style="padding:12px 16px;font-size:14px">${formatCell(f, props.data[f])}</div>
+          </div>`).join('')}
+        </div>`;
+      }
+      return '<div class="loading">No data</div>';
+
     case 'form':
+      const prefill = props.data || {};
       return `<form data-action="${props.action}" data-method="${props.method}" data-redirect="${props.redirect || ''}" onsubmit="submitForm(event)">
         ${props.fields.map(f => `
           <div class="form-group">
             <label>${f.label}${f.required ? ' *' : ''}</label>
-            ${renderInput(f)}
+            ${renderInput(f, prefill[f.name])}
           </div>`).join('')}
         <button type="submit" class="btn btn-primary" style="width:100%;margin-top:8px">${props.submit || 'Submit'}</button>
       </form>`;
@@ -413,17 +441,18 @@ function renderComponent(type, props) {
   }
 }
 
-function renderInput(f) {
+function renderInput(f, val) {
+  val = val ?? f.default ?? '';
   if (f.type === 'select') {
     return `<select name="${f.name}" ${f.required?'required':''}>
       <option value="">Select...</option>
-      ${(f.options||[]).map(o => `<option value="${o}">${o}</option>`).join('')}
+      ${(f.options||[]).map(o => `<option value="${o}" ${o===val?'selected':''}>${o}</option>`).join('')}
     </select>`;
   }
   if (f.type === 'textarea') {
-    return `<textarea name="${f.name}" ${f.required?'required':''} placeholder="${f.placeholder||''}"></textarea>`;
+    return `<textarea name="${f.name}" ${f.required?'required':''} placeholder="${f.placeholder||''}">${val}</textarea>`;
   }
-  return `<input type="${f.type||'text'}" name="${f.name}" ${f.required?'required':''} placeholder="${f.placeholder||''}">`;
+  return `<input type="${f.type||'text'}" name="${f.name}" ${f.required?'required':''} placeholder="${f.placeholder||''}" value="${val}">`;
 }
 
 function formatCell(col, val) {
@@ -462,7 +491,9 @@ async function submitForm(e) {
     toast('Saved successfully!');
     const redirect = form.dataset.redirect;
     if (redirect) {
-      location.hash = redirect.replace(/^\//,'').replace(/\//g,'-');
+      // Keep query params: /ticket-detail?id=1 → ticket-detail?id=1
+      const cleaned = redirect.replace(/^\//,'').replace(/\//g,'-');
+      location.hash = cleaned;
     }
   }
 }
@@ -510,12 +541,14 @@ async function loadStats() {
 
 // Router
 window.addEventListener('hashchange', () => {
-  currentPage = (location.hash.slice(1) || 'ticket-dashboard').replace(/\//g, '-');
-  renderPage(currentPage);
+  const parsed = parseHash(location.hash);
+  currentPage = parsed.slug;
+  currentParams = parsed.params;
+  renderPage(currentPage, currentParams);
 });
 
 // Boot
-renderPage(currentPage);
+renderPage(currentPage, currentParams);
 </script>
 </body>
 </html>

@@ -115,7 +115,14 @@ class PageBuilder
     /**
      * Render a page — resolve data sources and return render-ready structure.
      */
-    public function render(string $slug): ?array
+    /**
+     * Render a page — resolve data sources and return render-ready structure.
+     *
+     * @param string $slug Page slug.
+     * @param array  $params Runtime parameters (e.g., ['id' => '42']) that replace
+     *               {{param}} placeholders in tool args and prop values.
+     */
+    public function render(string $slug, array $params = []): ?array
     {
         $page = $this->pages[$slug] ?? null;
         if (!$page) return null;
@@ -123,7 +130,7 @@ class PageBuilder
         // Resolve data sources in sections
         $resolved = [];
         foreach ($page['sections'] as $section) {
-            $props = $this->resolveProps($section['props']);
+            $props = $this->resolveProps($section['props'], $params);
             $resolved[] = [
                 'slot'      => $section['slot'],
                 'component' => $section['component'],
@@ -131,13 +138,20 @@ class PageBuilder
             ];
         }
 
+        // Replace {{param}} in title
+        $title = $page['title'];
+        foreach ($params as $k => $v) {
+            $title = str_replace('{{' . $k . '}}', (string) $v, $title);
+        }
+
         return [
             'slug'     => $page['slug'],
-            'title'    => $page['title'],
+            'title'    => $title,
             'template' => $page['template'],
             'layout'   => $page['layout'],
             'auth'     => $page['auth'],
             'nav'      => $page['nav'],
+            'params'   => $params,
             'sections' => $resolved,
         ];
     }
@@ -186,24 +200,55 @@ class PageBuilder
      * Resolve data sources in props.
      * Props with 'source' key call the specified tool to get data.
      */
-    private function resolveProps(array $props): array
+    private function resolveProps(array $props, array $params = []): array
     {
         $resolved = [];
 
         foreach ($props as $key => $value) {
             if ('source' === $key && is_array($value) && isset($value['tool'])) {
-                // Resolve tool call
-                $resolved[$key] = $value; // keep definition
-                $resolved['data'] = $this->callTool($value['tool'], $value['args'] ?? []);
+                // Replace {{param}} in tool args
+                $args = $value['args'] ?? [];
+                $args = $this->replaceParams($args, $params);
+                $resolved[$key] = $value;
+                $resolved['data'] = $this->callTool($value['tool'], $args);
             } elseif (is_array($value)) {
-                // Recursively resolve nested arrays
-                $resolved[$key] = $this->resolveProps($value);
+                $resolved[$key] = $this->resolveProps($value, $params);
+            } elseif (is_string($value)) {
+                // Replace {{param}} in string values
+                $resolved[$key] = $this->replaceParamString($value, $params);
             } else {
                 $resolved[$key] = $value;
             }
         }
 
         return $resolved;
+    }
+
+    private function replaceParams(array $data, array $params): array
+    {
+        $result = [];
+        foreach ($data as $k => $v) {
+            if (is_string($v)) {
+                $result[$k] = $this->replaceParamString($v, $params);
+                // Cast to int if the result is purely numeric
+                if (is_numeric($result[$k])) {
+                    $result[$k] = str_contains($result[$k], '.') ? (float) $result[$k] : (int) $result[$k];
+                }
+            } elseif (is_array($v)) {
+                $result[$k] = $this->replaceParams($v, $params);
+            } else {
+                $result[$k] = $v;
+            }
+        }
+        return $result;
+    }
+
+    private function replaceParamString(string $value, array $params): string
+    {
+        foreach ($params as $k => $v) {
+            $value = str_replace('{{' . $k . '}}', (string) $v, $value);
+        }
+        return $value;
     }
 
     private function callTool(string $name, array $args): mixed

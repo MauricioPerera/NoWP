@@ -203,7 +203,14 @@ class AgentServiceProvider
             $router->get('/api/pages/catalog', fn() => $pb()->catalog());
 
             $router->get('/api/pages/{slug}', function ($req, $slug) use ($pb) {
-                $rendered = $pb()->render($slug);
+                // Extract params from query string (e.g., ?id=42)
+                $params = [];
+                if (method_exists($req, 'queryAll')) {
+                    $params = $req->queryAll();
+                } else {
+                    parse_str($_SERVER['QUERY_STRING'] ?? '', $params);
+                }
+                $rendered = $pb()->render($slug, $params);
                 if (!$rendered) return ['error' => 'Page not found', 'status' => 404];
                 return $rendered;
             });
