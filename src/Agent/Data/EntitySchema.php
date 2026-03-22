@@ -154,9 +154,18 @@ class EntitySchema
 
     private function fieldToSQL(array $field, string $driver): string
     {
-        $name    = $field['name'];
-        $null    = ($field['required'] ?? false) ? 'NOT NULL' : 'DEFAULT NULL';
-        $default = isset($field['default']) ? "DEFAULT " . $this->quoteDefault($field['default']) : '';
+        $name = $field['name'];
+
+        if ($field['required'] ?? false) {
+            $null    = 'NOT NULL';
+            $default = isset($field['default']) ? "DEFAULT " . $this->quoteDefault($field['default']) : '';
+        } elseif (isset($field['default'])) {
+            $null    = '';
+            $default = "DEFAULT " . $this->quoteDefault($field['default']);
+        } else {
+            $null    = 'DEFAULT NULL';
+            $default = '';
+        }
 
         $sqlType = match ($field['type']) {
             'string'   => 'VARCHAR(255)',

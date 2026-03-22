@@ -41,7 +41,7 @@ class EntityMaterializer
         // 1. Create table
         $driver = $this->db->getDriver();
         $sql    = $schema->toCreateSQL($driver);
-        $this->db->exec($sql);
+        $this->db->execute($sql);
 
         // 2. Register schema
         $this->schemas[$schema->name] = $schema;
@@ -67,7 +67,7 @@ class EntityMaterializer
             return ['error' => "Entity '{$name}' not found."];
         }
 
-        $this->db->exec("DROP TABLE IF EXISTS {$schema->tableName()}");
+        $this->db->execute("DROP TABLE IF EXISTS {$schema->tableName()}");
 
         if ($this->search && $schema->searchable) {
             $this->search->dropCollection("a2d_{$name}");
@@ -101,7 +101,7 @@ class EntityMaterializer
         // Insert
         $cols   = implode(', ', array_keys($clean));
         $places = implode(', ', array_fill(0, count($clean), '?'));
-        $this->db->exec(
+        $this->db->execute(
             "INSERT INTO {$schema->tableName()} ({$cols}) VALUES ({$places})",
             array_values($clean)
         );
@@ -125,7 +125,7 @@ class EntityMaterializer
         $schema = $this->getSchema($entity);
         if (!$schema) return null;
 
-        $row = $this->db->fetch(
+        $row = $this->db->fetchOne(
             "SELECT * FROM {$schema->tableName()} WHERE id = ?",
             [$id]
         );
@@ -173,7 +173,7 @@ class EntityMaterializer
         $params = array_values($clean);
         $params[] = $id;
 
-        $this->db->exec(
+        $this->db->execute(
             "UPDATE {$schema->tableName()} SET {$sets} WHERE id = ?",
             $params
         );
@@ -198,7 +198,7 @@ class EntityMaterializer
         $schema = $this->getSchema($entity);
         if (!$schema) return ['error' => "Entity '{$entity}' not found."];
 
-        $this->db->exec("DELETE FROM {$schema->tableName()} WHERE id = ?", [$id]);
+        $this->db->execute("DELETE FROM {$schema->tableName()} WHERE id = ?", [$id]);
 
         if ($this->search && $schema->searchable) {
             $this->search->remove("a2d_{$entity}", (string) $id);
@@ -295,12 +295,12 @@ class EntityMaterializer
     {
         $data = array_map(fn(EntitySchema $s) => $s->toArray(), $this->schemas);
         // Store in a meta table
-        $this->db->exec(
+        $this->db->execute(
             "CREATE TABLE IF NOT EXISTS a2d_schemas (name VARCHAR(100) PRIMARY KEY, definition TEXT)"
         );
         foreach ($data as $name => $def) {
             $json = json_encode($def);
-            $this->db->exec(
+            $this->db->execute(
                 "REPLACE INTO a2d_schemas (name, definition) VALUES (?, ?)",
                 [$name, $json]
             );

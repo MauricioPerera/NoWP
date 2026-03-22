@@ -201,6 +201,14 @@ class Connection
     {
         return $this->getPdo()->lastInsertId();
     }
+
+    /**
+     * Get the database driver name (mysql, sqlite, etc.)
+     */
+    public function getDriver(): string
+    {
+        return $this->config['connections'][$this->config['default']]['driver'] ?? 'mysql';
+    }
     
     /**
      * Begin a database transaction
