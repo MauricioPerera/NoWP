@@ -17,6 +17,8 @@ use Framework\Agent\Testing\TestRunner;
 use Framework\Agent\Integration\ServiceDefinition;
 use Framework\Agent\Integration\IntegrationManager;
 use Framework\Agent\Workflow\Scheduler;
+use Framework\Agent\Page\PageBuilder;
+use Framework\Agent\Page\ComponentCatalog;
 use Framework\Core\Container;
 use Framework\Core\Router;
 use Framework\Search\SearchService;
@@ -78,6 +80,11 @@ class AgentServiceProvider
         $schedulerPath = $config['scheduler_path'] ?? 'storage/agent/schedules';
         $scheduler = new Scheduler($workflow, $schedulerPath);
         $container->singleton(Scheduler::class, fn() => $scheduler);
+
+        // Build A2P page builder
+        $pagePath = $config['pages_path'] ?? 'storage/agent/pages';
+        $pageBuilder = new PageBuilder($pagePath, $agent);
+        $container->singleton(PageBuilder::class, fn() => $pageBuilder);
 
         $container->singleton(AgentService::class, fn() => $agent);
     }
@@ -179,6 +186,29 @@ class AgentServiceProvider
                 $def = $intMgr()->getService($name);
                 if (!$def) return ['error' => 'Not found', 'status' => 404];
                 return $intMgr()->testConnection($def);
+            });
+        }
+
+        // A2P page endpoints
+        if ($container->has(PageBuilder::class)) {
+            $pb = fn() => $container->get(PageBuilder::class);
+
+            $router->get('/api/pages', fn() => $pb()->list());
+
+            $router->post('/api/pages', function ($req) use ($pb) {
+                return $pb()->define($req->json());
+            });
+
+            $router->get('/api/pages/catalog', fn() => $pb()->catalog());
+
+            $router->get('/api/pages/{slug}', function ($req, $slug) use ($pb) {
+                $rendered = $pb()->render($slug);
+                if (!$rendered) return ['error' => 'Page not found', 'status' => 404];
+                return $rendered;
+            });
+
+            $router->delete('/api/pages/{slug}', function ($req, $slug) use ($pb) {
+                return $pb()->remove($slug);
             });
         }
 
@@ -438,6 +468,45 @@ class AgentServiceProvider
                     ->param('id', 'string', 'Schedule ID', true)
                     ->param('limit', 'integer', 'Max entries (default 20)')
                     ->handler(fn($id, $limit = 20) => $sched->history($id, (int)$limit))
+            );
+        }
+
+        // A2P tools — agent can define pages and UI
+        if ($container->has(PageBuilder::class)) {
+            $pb = $container->get(PageBuilder::class);
+
+            $agent->addTool(
+                Tool::make('define_page', 'Define a page using template, layout, and components from the catalog. Creates a complete UI page that the frontend can render.')
+                    ->param('page', 'string', 'Page slug (URL path)', true)
+                    ->param('title', 'string', 'Page title', true)
+                    ->param('template', 'string', 'Template: dashboard, list-page, detail-page, form-page, login-page, landing-page, settings-page, error-page', true)
+                    ->param('layout', 'string', 'Layout: admin-sidebar, public-centered, fullwidth, split, stacked')
+                    ->param('sections', 'array', 'Array of sections: [{slot, component, props}]', true)
+                    ->param('auth', 'object', 'Auth config: {required: true, role: "admin"}')
+                    ->param('description', 'string', 'Page description')
+                    ->handler(fn($page, $title = '', $template = 'dashboard', $layout = 'admin-sidebar', $sections = [], $auth = [], $description = '') =>
+                        $pb->define([
+                            'page' => $page, 'title' => $title, 'template' => $template,
+                            'layout' => $layout, 'sections' => $sections,
+                            'auth' => $auth, 'description' => $description,
+                        ])
+                    )
+            );
+
+            $agent->addTool(
+                Tool::make('list_pages', 'List all defined pages.')
+                    ->handler(fn() => $pb->list())
+            );
+
+            $agent->addTool(
+                Tool::make('remove_page', 'Remove a page definition.')
+                    ->param('page', 'string', 'Page slug to remove', true)
+                    ->handler(fn($page) => $pb->remove($page))
+            );
+
+            $agent->addTool(
+                Tool::make('get_component_catalog', 'Get the full component catalog — all available atoms, molecules, organisms, templates, and layouts the agent can use to build pages.')
+                    ->handler(fn() => $pb->catalog())
             );
         }
     }
