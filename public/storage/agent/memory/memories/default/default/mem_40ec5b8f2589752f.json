@@ -1,0 +1,16 @@
+{
+    "id": "mem_40ec5b8f2589752f",
+    "type": "memory",
+    "agentId": "default",
+    "userId": "default",
+    "content": "Cloudflare Workers AI generates embeddings using EmbeddingGemma model",
+    "category": "fact",
+    "tags": [
+        "cloudflare",
+        "embeddings"
+    ],
+    "sourceSession": null,
+    "accessCount": 0,
+    "createdAt": "2026-03-22T19:29:28+01:00",
+    "updatedAt": "2026-03-22T19:29:28+01:00"
+}
