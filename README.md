@@ -50,7 +50,8 @@ src/
 │   ├── Provider/              AI providers (Ollama, OpenAI, OpenRouter, custom)
 │   ├── Tools/                 Tool definitions with fluent builder
 │   ├── Workflow/              A2E workflow engine with data store
-│   └── Memory/                Persistent semantic memory
+│   ├── Memory/                Persistent semantic memory
+│   └── MCP/                   Model Context Protocol server
 ├── Search/                 # Semantic Search
 │   ├── SearchService.php      Index, search, hybrid search
 │   ├── SearchController.php   REST API endpoints
@@ -108,6 +109,57 @@ curl -X POST http://localhost:8000/api/agent/workflow \
 ```
 
 Operations: `ExecuteTool`, `FilterData`, `TransformData`, `Conditional`, `Loop`, `StoreData`, `Wait`, `MergeData`.
+
+### Tool Discovery
+
+```bash
+# List all tools with schemas
+curl http://localhost:8000/api/agent/tools
+
+# Execute a tool directly (without chat)
+curl -X POST http://localhost:8000/api/agent/tools/search_content \
+  -H 'Content-Type: application/json' \
+  -d '{"query": "PHP tutorials", "limit": 5}'
+```
+
+External agents can discover what your site can do via `GET /api/agent/tools`, then execute any tool directly via `POST /api/agent/tools/{name}`.
+
+### MCP Server (Model Context Protocol)
+
+NoWP is an MCP server. Claude Desktop, Cursor, Windsurf, and any MCP client can connect and use your site's tools natively.
+
+**Configure in Claude Desktop** (`claude_desktop_config.json`):
+
+```json
+{
+  "mcpServers": {
+    "my-site": {
+      "url": "https://your-site.com/api/mcp"
+    }
+  }
+}
+```
+
+**What happens:**
+
+```
+Claude: "Search my site for deployment guides"
+  → MCP: tools/list (discovers search_content, create_content, etc.)
+  → MCP: tools/call search_content {"query": "deployment guide"}
+  → NoWP: SearchService → php-vector-store → semantic results
+  → Claude: "I found 3 guides. The most relevant is..."
+```
+
+The MCP endpoint (`POST /api/mcp`) implements JSON-RPC 2.0 with:
+
+| Method | What it does |
+|--------|-------------|
+| `initialize` | Returns server info and capabilities |
+| `tools/list` | Lists all available tools with JSON Schema parameters |
+| `tools/call` | Executes a tool and returns results |
+| `ping` | Health check |
+
+All NoWP tools (search, content, memory, workflows) are automatically exposed as MCP tools. No extra configuration needed.
 
 ### Memory
 
@@ -189,8 +241,31 @@ $hooks->addFilter('content.before_create', function ($data) {
 });
 ```
 
+## Complete API
+
+| Endpoint | Method | What it does |
+|----------|--------|-------------|
+| `/api/mcp` | POST | MCP protocol (JSON-RPC 2.0) |
+| `/api/agent/chat` | POST | Chat with AI agent |
+| `/api/agent/tools` | GET | List available tools |
+| `/api/agent/tools/{name}` | POST | Execute a tool directly |
+| `/api/agent/workflow` | POST | Execute A2E workflow |
+| `/api/agent/memory` | POST | Save a memory |
+| `/api/agent/memory` | GET | Recall memories |
+| `/api/agent/reset` | POST | Clear conversation |
+| `/api/search` | GET | Semantic search |
+| `/api/search/stats` | GET | Search index stats |
+| `/api/search/reindex` | POST | Rebuild search index |
+| `/api/contents` | GET/POST | List / create content |
+| `/api/contents/{id}` | GET/PUT/DELETE | Read / update / delete |
+| `/api/auth/login` | POST | JWT authentication |
+
 ## Features
 
+- **MCP Server**: Claude, Cursor, Windsurf connect natively
+- **AI Agent**: Chat with tools, memory, and workflows
+- **Semantic Search**: Matryoshka embeddings, 392 bytes/vector, 100% recall
+- **Workflow Engine**: 8 A2E operations with data store
 - **API-First**: RESTful APIs for all functionality
 - **Modern PHP**: PHP 8.1+ (enums, readonly, named args)
 - **Authentication**: JWT with role-based permissions
@@ -198,10 +273,12 @@ $hooks->addFilter('content.before_create', function ($data) {
 - **Media**: Upload, image processing, organization
 - **Cache**: APCu, Redis, Memcached, File (auto-detect)
 - **Themes**: Template inheritance, parent/child
+- **Plugin System**: WordPress-style hooks and filters
 - **Security**: CSRF, rate limiting, security headers, bcrypt
 - **Testing**: 63 test files with Pest PHP
 - **Admin Panel**: Responsive SPA (vanilla JS)
 - **TypeScript Client**: Full-typed API client
+- **Works Offline**: Ollama for AI + embeddings, zero cloud dependency
 
 ## Requirements
 
