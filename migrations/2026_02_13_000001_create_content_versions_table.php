@@ -17,7 +17,7 @@ return new class extends Migration
 {
     public function up(): void
     {
-        $this->execute("
+        $this->connection->execute("
             CREATE TABLE IF NOT EXISTS content_versions (
                 id INT PRIMARY KEY AUTO_INCREMENT,
                 content_id INT NOT NULL,
@@ -37,6 +37,6 @@ return new class extends Migration
     
     public function down(): void
     {
-        $this->execute("DROP TABLE IF EXISTS content_versions");
+        $this->connection->execute("DROP TABLE IF EXISTS content_versions");
     }
 };

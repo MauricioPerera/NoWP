@@ -124,18 +124,22 @@ class Route
      */
     private function executeHandler(Container $container): Response
     {
+        // Get request from container for injection
+        $request = $container->has(Request::class) ? $container->get(Request::class) : null;
+        $args = $request ? array_merge([$request], $this->parameters) : $this->parameters;
+
         // Execute the handler
         if (is_callable($this->handler)) {
-            $result = call_user_func($this->handler, ...$this->parameters);
+            $result = call_user_func($this->handler, ...$args);
         } elseif (is_array($this->handler)) {
             [$controller, $method] = $this->handler;
-            
+
             // Resolve controller from container
             if (is_string($controller)) {
                 $controller = $container->resolve($controller);
             }
-            
-            $result = call_user_func([$controller, $method], ...$this->parameters);
+
+            $result = call_user_func([$controller, $method], ...$args);
         } else {
             throw new \RuntimeException('Invalid route handler');
         }

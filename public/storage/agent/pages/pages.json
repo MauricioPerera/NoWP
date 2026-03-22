@@ -1,0 +1,451 @@
+{
+    "ticket-dashboard": {
+        "slug": "ticket-dashboard",
+        "title": "Support Dashboard",
+        "description": "",
+        "template": "dashboard",
+        "layout": "admin-sidebar",
+        "sections": [
+            {
+                "slot": "header",
+                "component": "heading",
+                "props": {
+                    "content": "Support Tickets",
+                    "level": 1
+                }
+            },
+            {
+                "slot": "stats",
+                "component": "stat-cards",
+                "props": {
+                    "cards": [
+                        {
+                            "label": "Total",
+                            "value": 3
+                        },
+                        {
+                            "label": "High Priority",
+                            "value": 1
+                        },
+                        {
+                            "label": "Open",
+                            "value": 3
+                        }
+                    ]
+                }
+            },
+            {
+                "slot": "main",
+                "component": "data-table",
+                "props": {
+                    "source": {
+                        "tool": "entity_list",
+                        "args": {
+                            "entity": "ticket"
+                        }
+                    },
+                    "columns": [
+                        "subject",
+                        "priority",
+                        "status",
+                        "customer_email"
+                    ]
+                }
+            }
+        ],
+        "auth": {
+            "required": true
+        },
+        "nav": null,
+        "created_at": "2026-03-22T17:10:16+01:00"
+    },
+    "login": {
+        "slug": "login",
+        "title": "Sign In",
+        "description": "",
+        "template": "login-page",
+        "layout": "public-centered",
+        "sections": [
+            {
+                "slot": "main",
+                "component": "form",
+                "props": {
+                    "action": "/api/auth/login",
+                    "method": "POST",
+                    "fields": [
+                        {
+                            "name": "email",
+                            "type": "email",
+                            "label": "Email",
+                            "required": true,
+                            "placeholder": "admin@nowp.local"
+                        },
+                        {
+                            "name": "password",
+                            "type": "password",
+                            "label": "Password",
+                            "required": true
+                        }
+                    ],
+                    "submit": "Sign In"
+                }
+            }
+        ],
+        "auth": {
+            "required": false
+        },
+        "nav": null,
+        "created_at": "2026-03-22T17:16:03+01:00"
+    },
+    "tickets": {
+        "slug": "tickets",
+        "title": "All Tickets",
+        "description": "",
+        "template": "list-page",
+        "layout": "admin-sidebar",
+        "sections": [
+            {
+                "slot": "header",
+                "component": "heading",
+                "props": {
+                    "content": "Support Tickets",
+                    "level": 1
+                }
+            },
+            {
+                "slot": "actions",
+                "component": "button-group",
+                "props": {
+                    "buttons": [
+                        {
+                            "label": "New Ticket",
+                            "action": "navigate",
+                            "to": "/tickets/new",
+                            "variant": "primary"
+                        },
+                        {
+                            "label": "Refresh",
+                            "action": "reload",
+                            "variant": "secondary"
+                        }
+                    ]
+                }
+            },
+            {
+                "slot": "main",
+                "component": "data-table",
+                "props": {
+                    "source": {
+                        "tool": "entity_list",
+                        "args": {
+                            "entity": "ticket"
+                        }
+                    },
+                    "columns": [
+                        "id",
+                        "subject",
+                        "priority",
+                        "status",
+                        "customer_email",
+                        "created_at"
+                    ],
+                    "row_actions": [
+                        "edit",
+                        "delete"
+                    ]
+                }
+            }
+        ],
+        "auth": {
+            "required": true
+        },
+        "nav": null,
+        "created_at": "2026-03-22T17:16:03+01:00"
+    },
+    "tickets-new": {
+        "slug": "tickets-new",
+        "title": "New Ticket",
+        "description": "",
+        "template": "form-page",
+        "layout": "admin-sidebar",
+        "sections": [
+            {
+                "slot": "header",
+                "component": "heading",
+                "props": {
+                    "content": "Create Ticket",
+                    "level": 1
+                }
+            },
+            {
+                "slot": "main",
+                "component": "form",
+                "props": {
+                    "action": "/api/entities/ticket",
+                    "method": "POST",
+                    "fields": [
+                        {
+                            "name": "subject",
+                            "type": "text",
+                            "label": "Subject",
+                            "required": true
+                        },
+                        {
+                            "name": "customer_email",
+                            "type": "email",
+                            "label": "Customer Email",
+                            "required": true
+                        },
+                        {
+                            "name": "priority",
+                            "type": "select",
+                            "label": "Priority",
+                            "options": [
+                                "low",
+                                "medium",
+                                "high"
+                            ],
+                            "required": true
+                        },
+                        {
+                            "name": "status",
+                            "type": "select",
+                            "label": "Status",
+                            "options": [
+                                "open",
+                                "in_progress",
+                                "resolved",
+                                "closed"
+                            ]
+                        },
+                        {
+                            "name": "description",
+                            "type": "textarea",
+                            "label": "Description"
+                        }
+                    ],
+                    "submit": "Create Ticket",
+                    "redirect": "/tickets"
+                }
+            }
+        ],
+        "auth": {
+            "required": true
+        },
+        "nav": null,
+        "created_at": "2026-03-22T17:16:04+01:00"
+    },
+    "entities": {
+        "slug": "entities",
+        "title": "Data Entities",
+        "description": "",
+        "template": "list-page",
+        "layout": "admin-sidebar",
+        "sections": [
+            {
+                "slot": "header",
+                "component": "heading",
+                "props": {
+                    "content": "Data Entities",
+                    "level": 1
+                }
+            },
+            {
+                "slot": "main",
+                "component": "data-table",
+                "props": {
+                    "source": {
+                        "tool": "list_entities"
+                    },
+                    "columns": [
+                        "entity",
+                        "label",
+                        "fields",
+                        "search",
+                        "api"
+                    ]
+                }
+            }
+        ],
+        "auth": {
+            "required": true,
+            "role": "admin"
+        },
+        "nav": null,
+        "created_at": "2026-03-22T17:35:12+01:00"
+    },
+    "services": {
+        "slug": "services",
+        "title": "External Services",
+        "description": "",
+        "template": "list-page",
+        "layout": "admin-sidebar",
+        "sections": [
+            {
+                "slot": "header",
+                "component": "heading",
+                "props": {
+                    "content": "External Services",
+                    "level": 1
+                }
+            },
+            {
+                "slot": "main",
+                "component": "data-table",
+                "props": {
+                    "source": {
+                        "tool": "list_services"
+                    },
+                    "columns": [
+                        "service",
+                        "label",
+                        "base_url",
+                        "endpoints",
+                        "test_status"
+                    ]
+                }
+            }
+        ],
+        "auth": {
+            "required": true,
+            "role": "admin"
+        },
+        "nav": null,
+        "created_at": "2026-03-22T17:35:12+01:00"
+    },
+    "schedules": {
+        "slug": "schedules",
+        "title": "Scheduled Workflows",
+        "description": "",
+        "template": "list-page",
+        "layout": "admin-sidebar",
+        "sections": [
+            {
+                "slot": "header",
+                "component": "heading",
+                "props": {
+                    "content": "Scheduled Workflows",
+                    "level": 1
+                }
+            },
+            {
+                "slot": "main",
+                "component": "data-table",
+                "props": {
+                    "source": {
+                        "tool": "list_schedules"
+                    },
+                    "columns": [
+                        "id",
+                        "name",
+                        "interval",
+                        "enabled",
+                        "next_run",
+                        "last_run"
+                    ]
+                }
+            }
+        ],
+        "auth": {
+            "required": true,
+            "role": "admin"
+        },
+        "nav": null,
+        "created_at": "2026-03-22T17:35:12+01:00"
+    },
+    "pages": {
+        "slug": "pages",
+        "title": "Page Definitions",
+        "description": "",
+        "template": "list-page",
+        "layout": "admin-sidebar",
+        "sections": [
+            {
+                "slot": "header",
+                "component": "heading",
+                "props": {
+                    "content": "Page Definitions",
+                    "level": 1
+                }
+            },
+            {
+                "slot": "main",
+                "component": "data-table",
+                "props": {
+                    "source": {
+                        "tool": "list_pages"
+                    },
+                    "columns": [
+                        "slug",
+                        "title",
+                        "template",
+                        "layout",
+                        "sections"
+                    ]
+                }
+            }
+        ],
+        "auth": {
+            "required": true,
+            "role": "admin"
+        },
+        "nav": null,
+        "created_at": "2026-03-22T17:35:13+01:00"
+    },
+    "settings": {
+        "slug": "settings",
+        "title": "Settings",
+        "description": "",
+        "template": "settings-page",
+        "layout": "admin-sidebar",
+        "sections": [
+            {
+                "slot": "header",
+                "component": "heading",
+                "props": {
+                    "content": "System Settings",
+                    "level": 1
+                }
+            },
+            {
+                "slot": "main",
+                "component": "card-grid",
+                "props": {
+                    "columns": 2,
+                    "cards": [
+                        {
+                            "title": "Entities",
+                            "description": "Manage data models",
+                            "icon": "database",
+                            "link": "#entities"
+                        },
+                        {
+                            "title": "Services",
+                            "description": "External integrations",
+                            "icon": "plug",
+                            "link": "#services"
+                        },
+                        {
+                            "title": "Schedules",
+                            "description": "Automated workflows",
+                            "icon": "clock",
+                            "link": "#schedules"
+                        },
+                        {
+                            "title": "Pages",
+                            "description": "Page definitions",
+                            "icon": "layout",
+                            "link": "#pages"
+                        }
+                    ]
+                }
+            }
+        ],
+        "auth": {
+            "required": true,
+            "role": "admin"
+        },
+        "nav": null,
+        "created_at": "2026-03-22T17:35:44+01:00"
+    }
+}

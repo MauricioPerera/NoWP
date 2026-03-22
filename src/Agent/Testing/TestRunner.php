@@ -29,6 +29,7 @@ namespace Framework\Agent\Testing;
 
 use Framework\Agent\Data\EntityMaterializer;
 use Framework\Agent\Workflow\WorkflowEngine;
+use Framework\Agent\Page\PageBuilder;
 use Framework\Agent\AgentService;
 
 class TestRunner
@@ -36,15 +37,18 @@ class TestRunner
     private ?EntityMaterializer $materializer;
     private ?WorkflowEngine $workflow;
     private ?AgentService $agent;
+    private ?PageBuilder $pageBuilder;
 
     public function __construct(
         ?EntityMaterializer $materializer = null,
         ?WorkflowEngine $workflow = null,
         ?AgentService $agent = null,
+        ?PageBuilder $pageBuilder = null,
     ) {
         $this->materializer = $materializer;
         $this->workflow     = $workflow;
         $this->agent        = $agent;
+        $this->pageBuilder  = $pageBuilder;
     }
 
     /**
@@ -155,6 +159,13 @@ class TestRunner
             'workflow_produces' => $this->assertWorkflowProduces($test),
             'tool_returns'      => $this->assertToolReturns($test),
             'response_contains' => $this->assertResponseContains($test),
+            'page_exists'       => $this->assertPageExists($test),
+            'page_not_exists'   => $this->assertPageNotExists($test),
+            'page_renders'      => $this->assertPageRenders($test),
+            'page_has_component' => $this->assertPageHasComponent($test),
+            'page_has_data'     => $this->assertPageHasData($test),
+            'page_section_count' => $this->assertPageSectionCount($test),
+            'page_links_valid'  => $this->assertPageLinksValid($test),
             default             => ['pass' => false, 'detail' => "Unknown assertion: {$assert}"],
         };
     }
@@ -266,7 +277,7 @@ class TestRunner
     {
         $entity  = $test['entity'] ?? '';
         $filters = $test['filters'] ?? [];
-        $expect  = (int) ($test['count'] ?? 0);
+        $expect  = (int) ($test['expect'] ?? $test['count'] ?? 0);
 
         $results = $this->materializer?->findAll($entity, $filters);
         $actual  = count($results);
@@ -396,6 +407,178 @@ class TestRunner
         }
 
         return ['pass' => true, 'detail' => 'Response contains expected data'];
+    }
+
+    // ── A2P Page Assertions ──────────────────────────────────────
+
+    private function assertPageExists(array $test): array
+    {
+        if (!$this->pageBuilder) return ['pass' => false, 'detail' => 'No page builder'];
+
+        $slug = $test['page'] ?? '';
+        $pages = $this->pageBuilder->list();
+
+        foreach ($pages as $p) {
+            if (($p['slug'] ?? '') === $slug) {
+                return ['pass' => true, 'detail' => "Page '{$slug}' exists ({$p['template']}, {$p['sections']} sections)"];
+            }
+        }
+
+        return ['pass' => false, 'detail' => "Page '{$slug}' not found"];
+    }
+
+    private function assertPageNotExists(array $test): array
+    {
+        if (!$this->pageBuilder) return ['pass' => false, 'detail' => 'No page builder'];
+
+        $slug = $test['page'] ?? '';
+        $pages = $this->pageBuilder->list();
+
+        foreach ($pages as $p) {
+            if (($p['slug'] ?? '') === $slug) {
+                return ['pass' => false, 'detail' => "Page '{$slug}' should not exist but does"];
+            }
+        }
+
+        return ['pass' => true, 'detail' => "Page '{$slug}' correctly absent"];
+    }
+
+    private function assertPageRenders(array $test): array
+    {
+        if (!$this->pageBuilder) return ['pass' => false, 'detail' => 'No page builder'];
+
+        $slug = $test['page'] ?? '';
+        $rendered = $this->pageBuilder->render($slug);
+
+        if (!$rendered) {
+            return ['pass' => false, 'detail' => "Page '{$slug}' failed to render"];
+        }
+
+        if (empty($rendered['sections'])) {
+            return ['pass' => false, 'detail' => "Page '{$slug}' rendered with 0 sections"];
+        }
+
+        // Check for error in any section
+        foreach ($rendered['sections'] as $s) {
+            if (isset($s['props']['error'])) {
+                return ['pass' => false, 'detail' => "Section '{$s['slot']}' has error: {$s['props']['error']}"];
+            }
+        }
+
+        $sectionCount = count($rendered['sections']);
+        return ['pass' => true, 'detail' => "Page '{$slug}' renders OK ({$sectionCount} sections, layout: {$rendered['layout']})"];
+    }
+
+    private function assertPageHasComponent(array $test): array
+    {
+        if (!$this->pageBuilder) return ['pass' => false, 'detail' => 'No page builder'];
+
+        $slug = $test['page'] ?? '';
+        $component = $test['component'] ?? '';
+        $slot = $test['slot'] ?? null;
+
+        $rendered = $this->pageBuilder->render($slug);
+        if (!$rendered) return ['pass' => false, 'detail' => "Page '{$slug}' not found"];
+
+        foreach ($rendered['sections'] as $s) {
+            if ($s['component'] === $component) {
+                if ($slot && $s['slot'] !== $slot) continue;
+                return ['pass' => true, 'detail' => "Component '{$component}' found in slot '{$s['slot']}'"];
+            }
+        }
+
+        return ['pass' => false, 'detail' => "Component '{$component}' not found in page '{$slug}'"];
+    }
+
+    private function assertPageHasData(array $test): array
+    {
+        if (!$this->pageBuilder) return ['pass' => false, 'detail' => 'No page builder'];
+
+        $slug = $test['page'] ?? '';
+        $component = $test['component'] ?? 'data-table';
+        $minRows = (int) ($test['min_rows'] ?? $test['expect'] ?? 1);
+
+        $rendered = $this->pageBuilder->render($slug);
+        if (!$rendered) return ['pass' => false, 'detail' => "Page '{$slug}' not found"];
+
+        foreach ($rendered['sections'] as $s) {
+            if ($s['component'] === $component && isset($s['props']['data'])) {
+                $rows = count($s['props']['data']);
+                if ($rows >= $minRows) {
+                    return ['pass' => true, 'detail' => "Component '{$component}' has {$rows} rows (min: {$minRows})"];
+                }
+                return ['pass' => false, 'detail' => "Component '{$component}' has {$rows} rows, expected at least {$minRows}"];
+            }
+        }
+
+        return ['pass' => false, 'detail' => "No '{$component}' with data found in page '{$slug}'"];
+    }
+
+    private function assertPageSectionCount(array $test): array
+    {
+        if (!$this->pageBuilder) return ['pass' => false, 'detail' => 'No page builder'];
+
+        $slug = $test['page'] ?? '';
+        $expect = (int) ($test['expect'] ?? $test['count'] ?? 0);
+
+        $rendered = $this->pageBuilder->render($slug);
+        if (!$rendered) return ['pass' => false, 'detail' => "Page '{$slug}' not found"];
+
+        $actual = count($rendered['sections']);
+        return [
+            'pass' => $actual === $expect,
+            'detail' => $actual === $expect
+                ? "Page '{$slug}' has {$actual} sections"
+                : "Expected {$expect} sections, got {$actual}",
+        ];
+    }
+
+    private function assertPageLinksValid(array $test): array
+    {
+        if (!$this->pageBuilder) return ['pass' => false, 'detail' => 'No page builder'];
+
+        $slug = $test['page'] ?? '';
+        $rendered = $this->pageBuilder->render($slug);
+        if (!$rendered) return ['pass' => false, 'detail' => "Page '{$slug}' not found"];
+
+        // Collect all known page slugs
+        $knownSlugs = [];
+        foreach ($this->pageBuilder->list() as $p) {
+            $knownSlugs[] = $p['slug'] ?? '';
+        }
+
+        // Find all links in sections
+        $broken = [];
+        foreach ($rendered['sections'] as $section) {
+            $this->findLinks($section['props'], $knownSlugs, $broken, $section['slot']);
+        }
+
+        if (!empty($broken)) {
+            return ['pass' => false, 'detail' => 'Broken links: ' . implode(', ', $broken)];
+        }
+
+        return ['pass' => true, 'detail' => "All links in page '{$slug}' point to valid pages"];
+    }
+
+    private function findLinks(mixed $props, array $knownSlugs, array &$broken, string $context): void
+    {
+        if (!is_array($props)) return;
+
+        foreach ($props as $key => $value) {
+            if (is_string($value) && ($key === 'link' || $key === 'to')) {
+                // Normalize: remove leading # or /
+                $target = ltrim($value, '#/');
+                $target = str_replace('/', '-', $target);
+                // Skip external URLs and API endpoints
+                if (str_starts_with($value, 'http') || str_starts_with($value, '/api/')) continue;
+                if (!in_array($target, $knownSlugs, true)) {
+                    $broken[] = "{$context}:{$key}='{$value}' (page '{$target}' not found)";
+                }
+            }
+            if (is_array($value)) {
+                $this->findLinks($value, $knownSlugs, $broken, $context);
+            }
+        }
     }
 
     // ── Cleanup ────────────────────────────────────────────────────

@@ -1,0 +1,521 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>NoWP</title>
+<style>
+:root {
+  --bg: #0f1117;
+  --surface: #1a1d27;
+  --surface2: #242837;
+  --border: #2e3347;
+  --text: #e4e7f1;
+  --text-muted: #8b8fa7;
+  --primary: #6366f1;
+  --primary-hover: #818cf8;
+  --danger: #ef4444;
+  --success: #22c55e;
+  --warning: #eab308;
+  --radius: 8px;
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+}
+
+/* Layout: admin-sidebar */
+.layout-admin-sidebar {
+  display: grid;
+  grid-template-columns: 240px 1fr;
+  min-height: 100vh;
+}
+
+.sidebar {
+  background: var(--surface);
+  border-right: 1px solid var(--border);
+  padding: 20px 0;
+}
+
+.sidebar-brand {
+  padding: 0 20px 20px;
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--primary);
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 10px;
+}
+
+.sidebar-nav a {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 20px;
+  color: var(--text-muted);
+  text-decoration: none;
+  transition: all 0.15s;
+}
+
+.sidebar-nav a:hover, .sidebar-nav a.active {
+  color: var(--text);
+  background: var(--surface2);
+  border-right: 3px solid var(--primary);
+}
+
+.main-content {
+  padding: 30px;
+  overflow-y: auto;
+}
+
+/* Layout: public-centered */
+.layout-public-centered {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  padding: 20px;
+}
+
+.centered-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 40px;
+  width: 100%;
+  max-width: 420px;
+}
+
+/* Components */
+h1 { font-size: 24px; margin-bottom: 20px; }
+h2 { font-size: 18px; margin-bottom: 16px; }
+
+/* Data Table */
+.data-table {
+  width: 100%;
+  border-collapse: collapse;
+  background: var(--surface);
+  border-radius: var(--radius);
+  overflow: hidden;
+}
+
+.data-table th {
+  background: var(--surface2);
+  padding: 12px 16px;
+  text-align: left;
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-muted);
+  border-bottom: 1px solid var(--border);
+}
+
+.data-table td {
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--border);
+  font-size: 14px;
+}
+
+.data-table tr:hover td {
+  background: var(--surface2);
+}
+
+/* Badges */
+.badge {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.badge-high { background: rgba(239,68,68,0.15); color: #ef4444; }
+.badge-medium { background: rgba(234,179,8,0.15); color: #eab308; }
+.badge-low { background: rgba(34,197,94,0.15); color: #22c55e; }
+.badge-open { background: rgba(99,102,241,0.15); color: #6366f1; }
+.badge-in_progress { background: rgba(234,179,8,0.15); color: #eab308; }
+.badge-resolved { background: rgba(34,197,94,0.15); color: #22c55e; }
+.badge-closed { background: rgba(139,143,167,0.15); color: #8b8fa7; }
+
+/* Stat Cards */
+.stat-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+.stat-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 20px;
+}
+
+.stat-card-label {
+  font-size: 13px;
+  color: var(--text-muted);
+  margin-bottom: 8px;
+}
+
+.stat-card-value {
+  font-size: 28px;
+  font-weight: 700;
+}
+
+/* Button Group */
+.button-group {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 20px;
+}
+
+.btn {
+  padding: 8px 16px;
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+  background: var(--surface2);
+  color: var(--text);
+  cursor: pointer;
+  font-size: 14px;
+  transition: all 0.15s;
+}
+
+.btn:hover { background: var(--border); }
+
+.btn-primary {
+  background: var(--primary);
+  border-color: var(--primary);
+  color: white;
+}
+
+.btn-primary:hover { background: var(--primary-hover); }
+
+.btn-danger {
+  background: transparent;
+  border-color: var(--danger);
+  color: var(--danger);
+  font-size: 12px;
+  padding: 4px 10px;
+}
+
+/* Form */
+.form-group {
+  margin-bottom: 16px;
+}
+
+.form-group label {
+  display: block;
+  margin-bottom: 6px;
+  font-size: 13px;
+  color: var(--text-muted);
+}
+
+.form-group input,
+.form-group select,
+.form-group textarea {
+  width: 100%;
+  padding: 10px 12px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  color: var(--text);
+  font-size: 14px;
+}
+
+.form-group input:focus,
+.form-group select:focus,
+.form-group textarea:focus {
+  outline: none;
+  border-color: var(--primary);
+}
+
+.form-group textarea { min-height: 100px; resize: vertical; }
+
+/* Card Grid */
+.card-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 16px;
+}
+
+.card-grid-item {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 24px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.card-grid-item:hover {
+  border-color: var(--primary);
+  transform: translateY(-2px);
+}
+
+.card-grid-item h3 {
+  font-size: 16px;
+  margin-bottom: 8px;
+}
+
+.card-grid-item p {
+  font-size: 13px;
+  color: var(--text-muted);
+}
+
+/* Toast */
+.toast {
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  padding: 12px 20px;
+  background: var(--success);
+  color: white;
+  border-radius: var(--radius);
+  font-size: 14px;
+  opacity: 0;
+  transition: opacity 0.3s;
+  z-index: 1000;
+}
+
+.toast.show { opacity: 1; }
+
+/* Loading */
+.loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 40px;
+  color: var(--text-muted);
+}
+</style>
+</head>
+<body>
+<div id="app"></div>
+<div id="toast" class="toast"></div>
+
+<script>
+const API = '';
+let currentPage = (location.hash.slice(1) || 'ticket-dashboard').replace(/\//g, '-');
+
+// Render engine
+async function renderPage(slug) {
+  const res = await fetch(`${API}/api/pages/${slug}`);
+  if (!res.ok) {
+    document.getElementById('app').innerHTML = `<div class="layout-public-centered"><div class="centered-card"><h1>404</h1><p>Page not found: ${slug}</p></div></div>`;
+    return;
+  }
+  const page = await res.json();
+
+  if (page.layout === 'public-centered') {
+    document.getElementById('app').innerHTML = `
+      <div class="layout-public-centered">
+        <div class="centered-card">
+          <div style="text-align:center;margin-bottom:24px">
+            <span style="font-size:28px;font-weight:700;color:var(--primary)">NoWP</span>
+          </div>
+          ${renderSections(page.sections)}
+        </div>
+      </div>`;
+  } else {
+    document.getElementById('app').innerHTML = `
+      <div class="layout-admin-sidebar">
+        <div class="sidebar">
+          <div class="sidebar-brand">NoWP</div>
+          <nav class="sidebar-nav">
+            <a href="#ticket-dashboard" ${slug==='ticket-dashboard'?'class="active"':''}>Dashboard</a>
+            <a href="#tickets" ${slug==='tickets'?'class="active"':''}>Tickets</a>
+            <a href="#tickets-new" ${slug==='tickets-new'?'class="active"':''}>New Ticket</a>
+            <a href="#entities" ${slug==='entities'?'class="active"':''}>Entities</a>
+            <a href="#services" ${slug==='services'?'class="active"':''}>Services</a>
+            <a href="#schedules" ${slug==='schedules'?'class="active"':''}>Schedules</a>
+            <a href="#pages" ${slug==='pages'?'class="active"':''}>Pages</a>
+            <a href="#settings" ${slug==='settings'?'class="active"':''}>Settings</a>
+          </nav>
+        </div>
+        <div class="main-content">
+          ${renderSections(page.sections)}
+        </div>
+      </div>`;
+  }
+
+  bindEvents();
+}
+
+function renderSections(sections) {
+  return sections.map(s => renderComponent(s.component, s.props)).join('');
+}
+
+function renderComponent(type, props) {
+  switch(type) {
+    case 'heading':
+      return `<h${props.level || 1}>${props.content}</h${props.level || 1}>`;
+
+    case 'stat-cards':
+      return `<div class="stat-cards">${props.cards.map(c => `
+        <div class="stat-card">
+          <div class="stat-card-label">${c.label}</div>
+          <div class="stat-card-value" ${c.source ? `data-source='${JSON.stringify(c.source)}' data-value-type="${c.value}"` : ''}>${c.value ?? '...'}</div>
+        </div>`).join('')}</div>`;
+
+    case 'button-group':
+      return `<div class="button-group">${props.buttons.map(b => {
+        const cls = b.variant === 'primary' ? 'btn btn-primary' : 'btn';
+        if (b.action === 'navigate') return `<a href="#${b.to.replace(/^\//,'').replace(/\//g,'-')}" class="${cls}">${b.label}</a>`;
+        if (b.action === 'reload') return `<button class="${cls}" onclick="renderPage(currentPage)">${b.label}</button>`;
+        return `<button class="${cls}">${b.label}</button>`;
+      }).join('')}</div>`;
+
+    case 'data-table':
+      let rows = props.data;
+      if (rows && !Array.isArray(rows) && typeof rows === 'object') {
+        rows = Object.values(rows);
+      }
+      if (rows && rows.length > 0) {
+        const cols = props.columns || Object.keys(rows[0]);
+        const entity = props.source?.args?.entity;
+        const hasActions = !!entity && (props.row_actions || []).includes('delete');
+        return `<table class="data-table">
+          <thead><tr>${cols.map(c => `<th>${c}</th>`).join('')}${hasActions ? '<th>Actions</th>' : ''}</tr></thead>
+          <tbody>${rows.map(row => `<tr>${cols.map(c => `<td>${formatCell(c, row[c])}</td>`).join('')}
+            ${hasActions ? `<td><button class="btn-danger" onclick="deleteRecord('${entity}', ${row.id})">Delete</button></td>` : ''}
+          </tr>`).join('')}</tbody>
+        </table>`;
+      }
+      if (rows && rows.length === 0) return '<div class="loading" style="color:var(--text-muted)">No records found.</div>';
+      return '<div class="loading">Loading data...</div>';
+
+    case 'form':
+      return `<form data-action="${props.action}" data-method="${props.method}" data-redirect="${props.redirect || ''}" onsubmit="submitForm(event)">
+        ${props.fields.map(f => `
+          <div class="form-group">
+            <label>${f.label}${f.required ? ' *' : ''}</label>
+            ${renderInput(f)}
+          </div>`).join('')}
+        <button type="submit" class="btn btn-primary" style="width:100%;margin-top:8px">${props.submit || 'Submit'}</button>
+      </form>`;
+
+    case 'card-grid':
+      return `<div class="card-grid">${(props.cards || []).map(c => {
+        const link = (c.link || '').startsWith('#') ? c.link : `#${c.link.replace(/^\//,'')}`;
+        return `<div class="card-grid-item" onclick="location.hash='${link.slice(1)}'">
+          <h3>${c.title}</h3>
+          <p>${c.description}</p>
+        </div>`;
+      }).join('')}</div>`;
+
+    default:
+      return `<div style="color:var(--text-muted)">[${type}]</div>`;
+  }
+}
+
+function renderInput(f) {
+  if (f.type === 'select') {
+    return `<select name="${f.name}" ${f.required?'required':''}>
+      <option value="">Select...</option>
+      ${(f.options||[]).map(o => `<option value="${o}">${o}</option>`).join('')}
+    </select>`;
+  }
+  if (f.type === 'textarea') {
+    return `<textarea name="${f.name}" ${f.required?'required':''} placeholder="${f.placeholder||''}"></textarea>`;
+  }
+  return `<input type="${f.type||'text'}" name="${f.name}" ${f.required?'required':''} placeholder="${f.placeholder||''}">`;
+}
+
+function formatCell(col, val) {
+  if (val === null || val === undefined) return '-';
+  if (typeof val === 'boolean') return val ? 'Yes' : 'No';
+  if (Array.isArray(val)) return val.length;
+  if (typeof val === 'object') return JSON.stringify(val).slice(0, 60);
+  if (['priority','status'].includes(col)) {
+    return `<span class="badge badge-${val}">${val}</span>`;
+  }
+  if (col === 'created_at' || col === 'updated_at') {
+    return new Date(val).toLocaleDateString();
+  }
+  if (typeof val === 'string' && val.length > 60) return val.slice(0, 57) + '...';
+  return val;
+}
+
+async function submitForm(e) {
+  e.preventDefault();
+  const form = e.target;
+  const data = Object.fromEntries(new FormData(form));
+  const action = form.dataset.action;
+  const method = form.dataset.method;
+
+  const res = await fetch(`${API}${action}`, {
+    method,
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify(data),
+  });
+
+  const result = await res.json();
+
+  if (result.error) {
+    toast(result.error, 'error');
+  } else {
+    toast('Saved successfully!');
+    const redirect = form.dataset.redirect;
+    if (redirect) {
+      location.hash = redirect.replace(/^\//,'').replace(/\//g,'-');
+    }
+  }
+}
+
+async function deleteRecord(entity, id) {
+  if (!confirm('Delete this record?')) return;
+  await fetch(`${API}/api/entities/${entity}/${id}`, {method: 'DELETE'});
+  toast('Deleted');
+  renderPage(currentPage);
+}
+
+function toast(msg, type = 'success') {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.style.background = type === 'error' ? 'var(--danger)' : 'var(--success)';
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2500);
+}
+
+function bindEvents() {
+  document.querySelectorAll('.sidebar-nav a').forEach(a => {
+    a.addEventListener('click', e => {
+      e.preventDefault();
+      const slug = a.getAttribute('href').slice(1);
+      location.hash = slug;
+    });
+  });
+}
+
+// Dynamic stat loading
+async function loadStats() {
+  document.querySelectorAll('[data-source]').forEach(async el => {
+    const source = JSON.parse(el.dataset.source);
+    const res = await fetch(`${API}/api/agent/tools/${source.tool}`, {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify(source.args),
+    });
+    const data = await res.json();
+    if (el.dataset.valueType === 'length' && Array.isArray(data.result)) {
+      el.textContent = data.result.length;
+    }
+  });
+}
+
+// Router
+window.addEventListener('hashchange', () => {
+  currentPage = (location.hash.slice(1) || 'ticket-dashboard').replace(/\//g, '-');
+  renderPage(currentPage);
+});
+
+// Boot
+renderPage(currentPage);
+</script>
+</body>
+</html>

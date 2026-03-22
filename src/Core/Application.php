@@ -144,9 +144,17 @@ class Application
         $this->container->singleton(ExceptionHandler::class, function ($container) {
             $debug = $this->config('app.debug', false);
             $logPath = $this->config('app.log.path', BASE_PATH . '/storage/logs') . '/error.log';
-            
+
             return new ExceptionHandler($debug, $logPath);
         });
+
+        // Register Database Connection
+        $dbConfig = $this->config('database', []);
+        if (!empty($dbConfig)) {
+            $this->container->singleton(\Framework\Database\Connection::class, function () use ($dbConfig) {
+                return new \Framework\Database\Connection($dbConfig);
+            });
+        }
 
         // Register Search Service (semantic search via php-vector-store)
         $searchConfig = $this->config('search', []);
@@ -185,8 +193,23 @@ class Application
      */
     private function loadConfiguration(): void
     {
+        // Load .env file
+        $envFile = BASE_PATH . '/.env';
+        if (file_exists($envFile)) {
+            foreach (file($envFile, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES) as $line) {
+                if (str_starts_with(trim($line), '#')) continue;
+                if (str_contains($line, '=')) {
+                    [$key, $value] = explode('=', $line, 2);
+                    $key = trim($key);
+                    $value = trim($value, " \t\n\r\0\x0B\"'");
+                    $_ENV[$key] = $value;
+                    putenv("$key=$value");
+                }
+            }
+        }
+
         $configPath = BASE_PATH . '/config';
-        
+
         if (!is_dir($configPath)) {
             return;
         }

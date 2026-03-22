@@ -39,6 +39,7 @@ class AgentServiceProvider
 
         // Build workflow engine
         $workflow = new WorkflowEngine();
+        $container->singleton(WorkflowEngine::class, fn() => $workflow);
 
         // Build memory service (if search is available and memory is enabled)
         $memory = null;
@@ -57,9 +58,6 @@ class AgentServiceProvider
             systemPrompt: $config['system_prompt'] ?? '',
             agentId:      $config['id'] ?? 'default',
         );
-
-        // Register built-in tools
-        self::registerBuiltinTools($agent, $container, $config);
 
         // Build A2D materializer
         if ($container->has(Connection::class)) {
@@ -85,6 +83,9 @@ class AgentServiceProvider
         $pagePath = $config['pages_path'] ?? 'storage/agent/pages';
         $pageBuilder = new PageBuilder($pagePath, $agent);
         $container->singleton(PageBuilder::class, fn() => $pageBuilder);
+
+        // Register built-in tools (AFTER all A2 components are in the container)
+        self::registerBuiltinTools($agent, $container, $config);
 
         $container->singleton(AgentService::class, fn() => $agent);
     }
@@ -370,7 +371,11 @@ class AgentServiceProvider
             );
 
             // A2T tool — agent can run declarative tests
-            $runner = new TestRunner($mat, $workflow);
+            $workflowEngine = $container->has(WorkflowEngine::class)
+                ? $container->get(WorkflowEngine::class)
+                : new WorkflowEngine();
+            $pb = $container->has(PageBuilder::class) ? $container->get(PageBuilder::class) : null;
+            $runner = new TestRunner($mat, $workflowEngine, $agent, $pb);
             $container->singleton(TestRunner::class, fn() => $runner);
 
             $agent->addTool(
