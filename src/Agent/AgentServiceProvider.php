@@ -14,6 +14,8 @@ use Framework\Agent\MCP\MCPController;
 use Framework\Agent\Data\EntitySchema;
 use Framework\Agent\Data\EntityMaterializer;
 use Framework\Agent\Testing\TestRunner;
+use Framework\Agent\Integration\ServiceDefinition;
+use Framework\Agent\Integration\IntegrationManager;
 use Framework\Core\Container;
 use Framework\Core\Router;
 use Framework\Search\SearchService;
@@ -65,6 +67,12 @@ class AgentServiceProvider
             $container->singleton(EntityMaterializer::class, fn() => $materializer);
         }
 
+        // Build A2I integration manager
+        $integrationPath = $config['integration_path'] ?? 'storage/agent/integrations';
+        $integrations = new IntegrationManager($integrationPath);
+        $integrations->bootTools($agent); // re-register tools from stored services
+        $container->singleton(IntegrationManager::class, fn() => $integrations);
+
         $container->singleton(AgentService::class, fn() => $agent);
     }
 
@@ -112,6 +120,29 @@ class AgentServiceProvider
 
             $router->delete('/api/entities/{entity}/{id}', function ($req, $entity, $id) use ($mat) {
                 return $mat()->delete($entity, (int) $id);
+            });
+        }
+
+        // A2I service endpoints
+        if ($container->has(IntegrationManager::class)) {
+            $intMgr = fn() => $container->get(IntegrationManager::class);
+
+            $router->get('/api/services', fn() => $intMgr()->listServices());
+
+            $router->post('/api/services', function ($req) use ($intMgr, $container) {
+                $def = new ServiceDefinition($req->json());
+                $agent = $container->get(AgentService::class);
+                return $intMgr()->integrate($def, $agent);
+            });
+
+            $router->delete('/api/services/{name}', function ($req, $name) use ($intMgr) {
+                return $intMgr()->remove($name);
+            });
+
+            $router->post('/api/services/{name}/test', function ($req, $name) use ($intMgr) {
+                $def = $intMgr()->getService($name);
+                if (!$def) return ['error' => 'Not found', 'status' => 404];
+                return $intMgr()->testConnection($def);
             });
         }
 
@@ -281,6 +312,50 @@ class AgentServiceProvider
                     ->param('suite', 'string', 'Test suite name', true)
                     ->param('tests', 'array', 'Array of test assertions: [{assert, entity, data, expect, ...}]', true)
                     ->handler(fn($suite, $tests) => $runner->run(['suite' => $suite, 'tests' => $tests]))
+            );
+        }
+
+        // A2I tools — agent can define external service integrations
+        if ($container->has(IntegrationManager::class)) {
+            $intMgr = $container->get(IntegrationManager::class);
+
+            $agent->addTool(
+                Tool::make('integrate_service', 'Connect to an external REST API service. Creates stored credentials and one tool per endpoint. Use when you need to interact with a third-party API like Stripe, GitHub, Slack, etc.')
+                    ->param('service', 'string', 'Service name (lowercase, underscores)', true)
+                    ->param('label', 'string', 'Human-readable label')
+                    ->param('base_url', 'string', 'API base URL (e.g. https://api.stripe.com/v1)', true)
+                    ->param('auth', 'object', 'Auth config: {type: "bearer", key: "sk_...", key_env: "STRIPE_KEY"}', true)
+                    ->param('endpoints', 'array', 'Array of endpoints: [{name, method, path, params, body, description}]', true)
+                    ->param('test', 'object', 'Connection test: {endpoint: "name", expect_status: 200}')
+                    ->handler(function ($service, $label = '', $base_url = '', $auth = [], $endpoints = [], $test = []) use ($intMgr, $agent) {
+                        $def = new ServiceDefinition([
+                            'service' => $service, 'label' => $label,
+                            'base_url' => $base_url, 'auth' => $auth,
+                            'endpoints' => $endpoints, 'test' => $test,
+                        ]);
+                        return $intMgr->integrate($def, $agent);
+                    })
+            );
+
+            $agent->addTool(
+                Tool::make('list_services', 'List all integrated external services.')
+                    ->handler(fn() => $intMgr->listServices())
+            );
+
+            $agent->addTool(
+                Tool::make('remove_service', 'Remove an external service integration.')
+                    ->param('service', 'string', 'Service name to remove', true)
+                    ->handler(fn($service) => $intMgr->remove($service))
+            );
+
+            $agent->addTool(
+                Tool::make('test_service', 'Test connection to an integrated service.')
+                    ->param('service', 'string', 'Service name to test', true)
+                    ->handler(function ($service) use ($intMgr) {
+                        $def = $intMgr->getService($service);
+                        if (!$def) return ['error' => "Service '{$service}' not found"];
+                        return $intMgr->testConnection($def);
+                    })
             );
         }
     }
