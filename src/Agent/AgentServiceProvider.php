@@ -13,6 +13,7 @@ use Framework\Agent\MCP\MCPServer;
 use Framework\Agent\MCP\MCPController;
 use Framework\Agent\Data\EntitySchema;
 use Framework\Agent\Data\EntityMaterializer;
+use Framework\Agent\Testing\TestRunner;
 use Framework\Core\Container;
 use Framework\Core\Router;
 use Framework\Search\SearchService;
@@ -111,6 +112,15 @@ class AgentServiceProvider
 
             $router->delete('/api/entities/{entity}/{id}', function ($req, $entity, $id) use ($mat) {
                 return $mat()->delete($entity, (int) $id);
+            });
+        }
+
+        // A2T test endpoint
+        if ($container->has(TestRunner::class)) {
+            $router->post('/api/agent/test', function ($req) use ($container) {
+                $body = $req->json();
+                $runner = $container->get(TestRunner::class);
+                return $runner->run($body);
             });
         }
 
@@ -260,6 +270,17 @@ class AgentServiceProvider
                     ->param('query', 'string', 'Natural language search query', true)
                     ->param('limit', 'integer', 'Max results (default 10)')
                     ->handler(fn($entity, $query, $limit = 10) => $mat->search($entity, $query, (int)$limit))
+            );
+
+            // A2T tool — agent can run declarative tests
+            $runner = new TestRunner($mat, $workflow);
+            $container->singleton(TestRunner::class, fn() => $runner);
+
+            $agent->addTool(
+                Tool::make('run_tests', 'Run a declarative test suite to verify entity schemas, CRUD operations, validation rules, and workflows. Use after defining entities or workflows to verify they work correctly.')
+                    ->param('suite', 'string', 'Test suite name', true)
+                    ->param('tests', 'array', 'Array of test assertions: [{assert, entity, data, expect, ...}]', true)
+                    ->handler(fn($suite, $tests) => $runner->run(['suite' => $suite, 'tests' => $tests]))
             );
         }
     }
