@@ -85,6 +85,11 @@ class AgentServiceProvider
         $pageBuilder = new PageBuilder($pagePath, $agent);
         $container->singleton(PageBuilder::class, fn() => $pageBuilder);
 
+        // Build Project Manager
+        $projectsPath = $config['projects_path'] ?? 'storage/projects';
+        $projectManager = new Project\ProjectManager($projectsPath);
+        $container->singleton(Project\ProjectManager::class, fn() => $projectManager);
+
         // Build Scaffolding Engine (conversational system builder)
         $scaffoldPath = $config['scaffolding_path'] ?? 'storage/agent/scaffolding';
         $scaffolding = new Scaffolding\ScaffoldingEngine($agent, $scaffoldPath, $provider);
@@ -302,6 +307,35 @@ class AgentServiceProvider
             $router->get('/api/scaffold', fn() => $scaff()->status());
 
             $router->post('/api/scaffold/reset', fn() => $scaff()->reset());
+        }
+
+        // Project management endpoints
+        if ($container->has(Project\ProjectManager::class)) {
+            $pm = fn() => $container->get(Project\ProjectManager::class);
+
+            $router->get('/api/projects', fn() => $pm()->list());
+
+            $router->post('/api/projects', function ($req) use ($pm) {
+                $b = $req->json();
+                return $pm()->create($b['name'] ?? '', $b['description'] ?? '');
+            });
+
+            $router->get('/api/projects/{id}', function ($req, $id) use ($pm) {
+                return $pm()->get($id) ?? ['error' => 'Not found'];
+            });
+
+            $router->post('/api/projects/{id}/activate', function ($req, $id) use ($pm) {
+                return $pm()->activate($id);
+            });
+
+            $router->put('/api/projects/{id}', function ($req, $id) use ($pm) {
+                $b = $req->json();
+                return $pm()->rename($id, $b['name'] ?? '');
+            });
+
+            $router->delete('/api/projects/{id}', function ($req, $id) use ($pm) {
+                return $pm()->delete($id);
+            });
         }
 
         // Builder dashboard endpoint — aggregates all system status

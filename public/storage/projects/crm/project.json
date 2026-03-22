@@ -1,0 +1,8 @@
+{
+    "id": "crm",
+    "name": "CRM",
+    "description": "Customer relationship management",
+    "status": "active",
+    "createdAt": "2026-03-22T19:53:44+01:00",
+    "updatedAt": "2026-03-22T19:53:44+01:00"
+}
