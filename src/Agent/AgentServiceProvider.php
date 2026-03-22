@@ -304,6 +304,56 @@ class AgentServiceProvider
             $router->post('/api/scaffold/reset', fn() => $scaff()->reset());
         }
 
+        // Builder dashboard endpoint — aggregates all system status
+        $router->get('/api/builder/status', function () use ($container) {
+            $status = ['timestamp' => date('c')];
+
+            // Entities
+            if ($container->has(EntityMaterializer::class)) {
+                $schemas = $container->get(EntityMaterializer::class)->listSchemas();
+                $entities = [];
+                foreach ($schemas as $name => $schema) {
+                    $count = 0;
+                    try { $count = count($container->get(EntityMaterializer::class)->findAll($name, [], 1000)); } catch (\Throwable $e) {}
+                    $entities[] = ['name' => $name, 'label' => $schema['label'] ?? $name, 'fields' => count($schema['fields'] ?? []), 'records' => $count];
+                }
+                $status['entities'] = $entities;
+            }
+
+            // Pages
+            if ($container->has(PageBuilder::class)) {
+                $status['pages'] = $container->get(PageBuilder::class)->list();
+            }
+
+            // Services
+            if ($container->has(IntegrationManager::class)) {
+                $services = $container->get(IntegrationManager::class)->listServices();
+                $status['services'] = is_array($services) ? array_values($services) : [];
+            }
+
+            // Schedules
+            if ($container->has(Scheduler::class)) {
+                $status['schedules'] = $container->get(Scheduler::class)->list();
+            }
+
+            // Memory
+            if ($container->has(MemoryService::class)) {
+                $status['memory'] = $container->get(MemoryService::class)->stats('default', 'default');
+            }
+
+            // Scaffolding
+            if ($container->has(Scaffolding\ScaffoldingEngine::class)) {
+                $status['scaffold'] = $container->get(Scaffolding\ScaffoldingEngine::class)->status();
+            }
+
+            // Tools count
+            if ($container->has(AgentService::class)) {
+                $status['tools'] = count($container->get(AgentService::class)->listTools());
+            }
+
+            return $status;
+        });
+
         // MCP endpoint
         $router->post('/api/mcp', function ($req) use ($container) {
             $mcp = new MCPController(

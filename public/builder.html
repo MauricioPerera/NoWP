@@ -1,0 +1,415 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>NoWP Builder</title>
+<style>
+:root {
+  --bg: #0a0b10;
+  --surface: #12141d;
+  --surface2: #1a1d2a;
+  --border: #262a3a;
+  --text: #e4e7f1;
+  --muted: #6b7094;
+  --primary: #6366f1;
+  --primary-hover: #818cf8;
+  --success: #22c55e;
+  --warning: #eab308;
+  --danger: #ef4444;
+  --info: #3b82f6;
+  --radius: 8px;
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: var(--bg); color: var(--text); height: 100vh; overflow: hidden; }
+
+/* Layout */
+.builder { display: grid; grid-template-columns: 1fr 400px; height: 100vh; }
+.main-panel { display: flex; flex-direction: column; overflow: hidden; }
+.chat-panel { display: flex; flex-direction: column; border-left: 1px solid var(--border); background: var(--surface); }
+
+/* Header */
+.header { display: flex; align-items: center; justify-content: space-between; padding: 12px 20px; border-bottom: 1px solid var(--border); background: var(--surface); }
+.header-brand { font-size: 18px; font-weight: 700; color: var(--primary); }
+.header-tabs { display: flex; gap: 4px; }
+.tab { padding: 6px 14px; border-radius: var(--radius); border: none; background: transparent; color: var(--muted); cursor: pointer; font-size: 13px; }
+.tab.active { background: var(--primary); color: white; }
+.tab:hover:not(.active) { background: var(--surface2); color: var(--text); }
+.header-actions { display: flex; gap: 8px; }
+.btn-sm { padding: 6px 12px; border-radius: var(--radius); border: 1px solid var(--border); background: var(--surface2); color: var(--text); cursor: pointer; font-size: 12px; }
+.btn-sm:hover { background: var(--border); }
+.btn-primary-sm { background: var(--primary); border-color: var(--primary); color: white; }
+.btn-primary-sm:hover { background: var(--primary-hover); }
+
+/* Content area */
+.content { flex: 1; overflow-y: auto; padding: 20px; }
+
+/* Dashboard */
+.stats-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 12px; margin-bottom: 20px; }
+.stat-box { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px; }
+.stat-label { font-size: 11px; text-transform: uppercase; letter-spacing: 0.05em; color: var(--muted); margin-bottom: 6px; }
+.stat-value { font-size: 24px; font-weight: 700; }
+.stat-value.green { color: var(--success); }
+.stat-value.yellow { color: var(--warning); }
+.stat-value.red { color: var(--danger); }
+.stat-value.blue { color: var(--info); }
+
+.section { margin-bottom: 24px; }
+.section-title { font-size: 14px; font-weight: 600; margin-bottom: 12px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.05em; }
+.card-list { display: flex; flex-direction: column; gap: 8px; }
+.card-item { display: flex; align-items: center; justify-content: space-between; padding: 12px 16px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); }
+.card-item-name { font-size: 14px; font-weight: 500; }
+.card-item-meta { font-size: 12px; color: var(--muted); }
+.badge-sm { display: inline-block; padding: 2px 8px; border-radius: 10px; font-size: 11px; font-weight: 600; }
+.badge-ok { background: rgba(34,197,94,0.15); color: var(--success); }
+.badge-warn { background: rgba(234,179,8,0.15); color: var(--warning); }
+.badge-err { background: rgba(239,68,68,0.15); color: var(--danger); }
+.badge-info { background: rgba(99,102,241,0.15); color: var(--primary); }
+
+/* Tasks */
+.task-item { display: flex; align-items: flex-start; gap: 10px; padding: 12px 16px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); margin-bottom: 8px; }
+.task-check { width: 18px; height: 18px; border-radius: 4px; border: 2px solid var(--border); cursor: pointer; flex-shrink: 0; margin-top: 2px; }
+.task-check.done { background: var(--success); border-color: var(--success); }
+.task-content { flex: 1; }
+.task-title { font-size: 14px; }
+.task-title.done { text-decoration: line-through; color: var(--muted); }
+.task-detail { font-size: 12px; color: var(--muted); margin-top: 2px; }
+
+/* Chat */
+.chat-header { padding: 12px 16px; border-bottom: 1px solid var(--border); font-size: 14px; font-weight: 600; display: flex; align-items: center; justify-content: space-between; }
+.chat-state { font-size: 11px; padding: 2px 8px; border-radius: 10px; }
+.chat-messages { flex: 1; overflow-y: auto; padding: 16px; display: flex; flex-direction: column; gap: 12px; }
+.msg { max-width: 90%; padding: 10px 14px; border-radius: 12px; font-size: 14px; line-height: 1.5; white-space: pre-wrap; word-wrap: break-word; }
+.msg-user { align-self: flex-end; background: var(--primary); color: white; border-bottom-right-radius: 4px; }
+.msg-assistant { align-self: flex-start; background: var(--surface2); border: 1px solid var(--border); border-bottom-left-radius: 4px; }
+.msg-system { align-self: center; background: transparent; color: var(--muted); font-size: 12px; font-style: italic; }
+.chat-input { display: flex; gap: 8px; padding: 12px 16px; border-top: 1px solid var(--border); }
+.chat-input input { flex: 1; padding: 10px 14px; background: var(--bg); border: 1px solid var(--border); border-radius: var(--radius); color: var(--text); font-size: 14px; }
+.chat-input input:focus { outline: none; border-color: var(--primary); }
+.chat-input button { padding: 10px 16px; background: var(--primary); border: none; border-radius: var(--radius); color: white; cursor: pointer; font-size: 14px; }
+.chat-input button:disabled { opacity: 0.5; cursor: not-allowed; }
+.typing { color: var(--muted); font-size: 13px; padding: 4px 16px; }
+
+/* Empty state */
+.empty { text-align: center; padding: 40px; color: var(--muted); }
+.empty h3 { margin-bottom: 8px; color: var(--text); }
+</style>
+</head>
+<body>
+<div class="builder">
+  <!-- Main Panel -->
+  <div class="main-panel">
+    <div class="header">
+      <span class="header-brand">NoWP Builder</span>
+      <div class="header-tabs">
+        <button class="tab active" onclick="switchTab('dashboard')">Dashboard</button>
+        <button class="tab" onclick="switchTab('tasks')">Tasks</button>
+        <button class="tab" onclick="switchTab('tests')">Tests</button>
+      </div>
+      <div class="header-actions">
+        <button class="btn-sm" onclick="openApp()">Open App</button>
+        <button class="btn-sm btn-primary-sm" onclick="runTests()">Run Tests</button>
+      </div>
+    </div>
+    <div class="content" id="main-content">
+      <div class="empty"><h3>Loading...</h3></div>
+    </div>
+  </div>
+
+  <!-- Chat Panel -->
+  <div class="chat-panel">
+    <div class="chat-header">
+      <span>AI Builder</span>
+      <span class="chat-state badge-sm badge-info" id="chat-state">idle</span>
+    </div>
+    <div class="chat-messages" id="chat-messages">
+      <div class="msg msg-system">Tell me what you want to build.</div>
+    </div>
+    <div id="typing" class="typing" style="display:none">Thinking...</div>
+    <div class="chat-input">
+      <input id="chat-input" placeholder="Describe your system..." onkeydown="if(event.key==='Enter')sendMessage()">
+      <button onclick="sendMessage()" id="send-btn">Send</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const API = '';
+let currentTab = 'dashboard';
+let statusData = null;
+let testResults = null;
+let tasks = [];
+
+// ── Tab Switching ──────────────────────────────────
+
+function switchTab(tab) {
+  currentTab = tab;
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.querySelector(`.tab[onclick*="${tab}"]`).classList.add('active');
+  render();
+}
+
+// ── Dashboard ──────────────────────────────────────
+
+async function loadStatus() {
+  try {
+    const res = await fetch(`${API}/api/builder/status`);
+    statusData = await res.json();
+    generateTasks();
+    render();
+  } catch(e) {
+    document.getElementById('main-content').innerHTML = `<div class="empty"><h3>Cannot connect to server</h3><p>${e.message}</p></div>`;
+  }
+}
+
+function render() {
+  const el = document.getElementById('main-content');
+  if (currentTab === 'dashboard') el.innerHTML = renderDashboard();
+  else if (currentTab === 'tasks') el.innerHTML = renderTasks();
+  else if (currentTab === 'tests') el.innerHTML = renderTests();
+}
+
+function renderDashboard() {
+  if (!statusData) return '<div class="empty"><h3>Loading...</h3></div>';
+  const d = statusData;
+
+  const entities = d.entities || [];
+  const pages = d.pages || [];
+  const services = d.services || [];
+  const schedules = d.schedules || [];
+  const mem = d.memory || {};
+  const tools = d.tools || 0;
+
+  return `
+    <div class="stats-row">
+      <div class="stat-box"><div class="stat-label">Entities</div><div class="stat-value blue">${entities.length}</div></div>
+      <div class="stat-box"><div class="stat-label">Pages</div><div class="stat-value blue">${pages.length}</div></div>
+      <div class="stat-box"><div class="stat-label">Services</div><div class="stat-value green">${services.length}</div></div>
+      <div class="stat-box"><div class="stat-label">Schedules</div><div class="stat-value yellow">${schedules.length}</div></div>
+      <div class="stat-box"><div class="stat-label">Tools</div><div class="stat-value">${tools}</div></div>
+      <div class="stat-box"><div class="stat-label">Memories</div><div class="stat-value">${(mem.memories||0)+(mem.skills||0)+(mem.knowledge||0)}</div></div>
+    </div>
+
+    <div class="section">
+      <div class="section-title">Entities</div>
+      <div class="card-list">
+        ${entities.length ? entities.map(e => `
+          <div class="card-item">
+            <div><div class="card-item-name">${e.name}</div><div class="card-item-meta">${e.fields} fields</div></div>
+            <div><span class="badge-sm badge-ok">${e.records} records</span></div>
+          </div>`).join('') : '<div class="card-item"><div class="card-item-meta">No entities defined yet</div></div>'}
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-title">Pages</div>
+      <div class="card-list">
+        ${pages.length ? pages.map(p => `
+          <div class="card-item">
+            <div><div class="card-item-name">${p.title || p.slug}</div><div class="card-item-meta">${p.template} / ${p.layout}</div></div>
+            <div><span class="badge-sm badge-info">${p.sections} sections</span></div>
+          </div>`).join('') : '<div class="card-item"><div class="card-item-meta">No pages defined yet</div></div>'}
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-title">Services</div>
+      <div class="card-list">
+        ${services.length ? services.map(s => `
+          <div class="card-item">
+            <div><div class="card-item-name">${s.label || s.name}</div><div class="card-item-meta">${s.base_url || ''}</div></div>
+            <div><span class="badge-sm badge-ok">connected</span></div>
+          </div>`).join('') : '<div class="card-item"><div class="card-item-meta">No services integrated yet</div></div>'}
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-title">Memory</div>
+      <div class="stats-row">
+        <div class="stat-box"><div class="stat-label">Memories</div><div class="stat-value">${mem.memories||0}</div></div>
+        <div class="stat-box"><div class="stat-label">Skills</div><div class="stat-value">${mem.skills||0}</div></div>
+        <div class="stat-box"><div class="stat-label">Knowledge</div><div class="stat-value">${mem.knowledge||0}</div></div>
+        <div class="stat-box"><div class="stat-label">Profile</div><div class="stat-value">${mem.profile ? 'Yes' : 'No'}</div></div>
+      </div>
+    </div>`;
+}
+
+// ── Tasks ──────────────────────────────────────────
+
+function generateTasks() {
+  if (!statusData) return;
+  tasks = [];
+  const d = statusData;
+
+  if (!(d.entities || []).length) tasks.push({id: 't1', title: 'Define entities', detail: 'Tell the AI what data your system needs', done: false});
+  else tasks.push({id: 't1', title: 'Define entities', detail: `${d.entities.length} entities created`, done: true});
+
+  if (!(d.pages || []).length) tasks.push({id: 't2', title: 'Create pages', detail: 'Define the UI pages', done: false});
+  else tasks.push({id: 't2', title: 'Create pages', detail: `${d.pages.length} pages defined`, done: true});
+
+  if (!(d.services || []).length) tasks.push({id: 't3', title: 'Connect services', detail: 'Integrate external APIs', done: false});
+  else tasks.push({id: 't3', title: 'Connect services', detail: `${d.services.length} services connected`, done: true});
+
+  if (!(d.schedules || []).length) tasks.push({id: 't4', title: 'Set up automation', detail: 'Schedule recurring workflows', done: false});
+  else tasks.push({id: 't4', title: 'Set up automation', detail: `${d.schedules.length} schedules active`, done: true});
+
+  if (!d.memory?.profile) tasks.push({id: 't5', title: 'Configure profile', detail: 'Set up the agent profile', done: false});
+  else tasks.push({id: 't5', title: 'Configure profile', detail: 'Profile configured', done: true});
+
+  // Check for empty entities (no records)
+  (d.entities || []).forEach(e => {
+    if (e.records === 0) tasks.push({id: `seed-${e.name}`, title: `Seed ${e.name}`, detail: `Entity "${e.name}" has no records. Add sample data.`, done: false});
+  });
+
+  // Check for pages without data
+  tasks.push({id: 't6', title: 'Run tests', detail: testResults ? `${testResults.passed}/${testResults.total} passed` : 'Not run yet', done: testResults?.success || false});
+}
+
+function renderTasks() {
+  const done = tasks.filter(t => t.done).length;
+  const total = tasks.length;
+  const pct = total ? Math.round(done/total*100) : 0;
+
+  return `
+    <div class="stats-row">
+      <div class="stat-box"><div class="stat-label">Progress</div><div class="stat-value ${pct===100?'green':pct>50?'yellow':'red'}">${pct}%</div></div>
+      <div class="stat-box"><div class="stat-label">Done</div><div class="stat-value green">${done}</div></div>
+      <div class="stat-box"><div class="stat-label">Pending</div><div class="stat-value ${total-done?'yellow':'green'}">${total-done}</div></div>
+    </div>
+    <div style="margin-bottom:16px;height:4px;background:var(--border);border-radius:2px">
+      <div style="height:100%;width:${pct}%;background:var(--primary);border-radius:2px;transition:width 0.3s"></div>
+    </div>
+    ${tasks.map(t => `
+      <div class="task-item">
+        <div class="task-check ${t.done?'done':''}"></div>
+        <div class="task-content">
+          <div class="task-title ${t.done?'done':''}">${t.title}</div>
+          <div class="task-detail">${t.detail}</div>
+        </div>
+      </div>`).join('')}`;
+}
+
+// ── Tests ──────────────────────────────────────────
+
+function renderTests() {
+  if (!testResults) return `
+    <div class="empty">
+      <h3>No tests run yet</h3>
+      <p>Click "Run Tests" to verify your system.</p>
+    </div>`;
+
+  const r = testResults;
+  return `
+    <div class="stats-row">
+      <div class="stat-box"><div class="stat-label">Total</div><div class="stat-value">${r.total}</div></div>
+      <div class="stat-box"><div class="stat-label">Passed</div><div class="stat-value green">${r.passed}</div></div>
+      <div class="stat-box"><div class="stat-label">Failed</div><div class="stat-value ${r.failed?'red':'green'}">${r.failed}</div></div>
+      <div class="stat-box"><div class="stat-label">Duration</div><div class="stat-value">${r.duration_ms?.toFixed(0) || '?'}ms</div></div>
+    </div>
+    <div class="card-list">
+      ${(r.results || []).map(t => `
+        <div class="card-item">
+          <div><div class="card-item-name">${t.label}</div><div class="card-item-meta">${t.detail}</div></div>
+          <span class="badge-sm ${t.pass ? 'badge-ok' : 'badge-err'}">${t.pass ? 'PASS' : 'FAIL'}</span>
+        </div>`).join('')}
+    </div>`;
+}
+
+async function runTests() {
+  // Auto-generate tests based on current system state
+  if (!statusData) await loadStatus();
+  const tests = [];
+
+  (statusData.entities || []).forEach(e => {
+    tests.push({assert: 'entity_exists', entity: e.name});
+  });
+
+  (statusData.pages || []).forEach(p => {
+    tests.push({assert: 'page_exists', page: p.slug});
+    tests.push({assert: 'page_renders', page: p.slug});
+  });
+
+  if (!tests.length) { alert('Nothing to test — build something first!'); return; }
+
+  try {
+    const res = await fetch(`${API}/api/agent/tools/run_tests`, {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({suite: 'builder-auto', tests}),
+    });
+    const data = await res.json();
+    testResults = data.result || data;
+    generateTasks();
+    switchTab('tests');
+  } catch(e) {
+    alert('Test failed: ' + e.message);
+  }
+}
+
+// ── Chat ──────────────────────────────────────────
+
+let sending = false;
+
+async function sendMessage() {
+  const input = document.getElementById('chat-input');
+  const msg = input.value.trim();
+  if (!msg || sending) return;
+
+  input.value = '';
+  addMessage('user', msg);
+
+  sending = true;
+  document.getElementById('send-btn').disabled = true;
+  document.getElementById('typing').style.display = 'block';
+
+  try {
+    const res = await fetch(`${API}/api/scaffold`, {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({message: msg}),
+    });
+    const data = await res.json();
+
+    if (data.error) {
+      addMessage('assistant', 'Error: ' + (data.error.message || data.error));
+    } else {
+      addMessage('assistant', data.message || 'Done.');
+      document.getElementById('chat-state').textContent = data.state || 'idle';
+
+      // Refresh dashboard after execution
+      if (data.state === 'review' || data.state === 'done') {
+        await loadStatus();
+      }
+    }
+  } catch(e) {
+    addMessage('assistant', 'Connection error: ' + e.message);
+  }
+
+  sending = false;
+  document.getElementById('send-btn').disabled = false;
+  document.getElementById('typing').style.display = 'none';
+}
+
+function addMessage(role, content) {
+  const container = document.getElementById('chat-messages');
+  const div = document.createElement('div');
+  div.className = `msg msg-${role}`;
+  div.textContent = content;
+  container.appendChild(div);
+  container.scrollTop = container.scrollHeight;
+}
+
+function openApp() {
+  window.open('/app.html', '_blank');
+}
+
+// ── Boot ──────────────────────────────────────────
+
+loadStatus();
+
+// Auto-refresh every 30s
+setInterval(loadStatus, 30000);
+</script>
+</body>
+</html>
