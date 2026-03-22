@@ -1,6 +1,63 @@
 {
-    "state": "idle",
-    "context": [],
+    "state": "discover",
+    "context": [
+        "hola",
+        "responde en espa\u00f1ol",
+        "la idea es un gestor de alimentos en esencia el suuario pude cargar la tabla nutricion de alimentos y su nutricion idela y el sistema puede sugerir que comer, que no comer como combinarlo etc",
+        "Facilitar a personas que tiene algun tipo de limitacion alimentaria el seleccionar mejor entre alimentso que puede acceder a dierio, por ejemplo yo tengo ciruguia de manga garstrica",
+        "la ingesta de datos por usuario y recomentdar"
+    ],
     "plan": [],
-    "history": []
+    "history": [
+        {
+            "role": "user",
+            "content": "hola",
+            "state": "idle"
+        },
+        {
+            "role": "assistant",
+            "content": "Sure, let's start with the purpose of the system. Can you briefly describe what this application is meant to achieve?",
+            "state": "discover"
+        },
+        {
+            "role": "user",
+            "content": "responde en espa\u00f1ol",
+            "state": "discover"
+        },
+        {
+            "role": "assistant",
+            "content": "\u00bfPuedes decirme en qu\u00e9 consiste el prop\u00f3sito del sistema que deseas desarrollar?",
+            "state": "discover"
+        },
+        {
+            "role": "user",
+            "content": "la idea es un gestor de alimentos en esencia el suuario pude cargar la tabla nutricion de alimentos y su nutricion idela y el sistema puede sugerir que comer, que no comer como combinarlo etc",
+            "state": "discover"
+        },
+        {
+            "role": "assistant",
+            "content": "\u00bfCu\u00e1l es el prop\u00f3sito de la aplicaci\u00f3n?",
+            "state": "discover"
+        },
+        {
+            "role": "user",
+            "content": "Facilitar a personas que tiene algun tipo de limitacion alimentaria el seleccionar mejor entre alimentso que puede acceder a dierio, por ejemplo yo tengo ciruguia de manga garstrica",
+            "state": "discover"
+        },
+        {
+            "role": "assistant",
+            "content": "Pregunta 1: \u00bfCu\u00e1l es el prop\u00f3sito del sistema?",
+            "state": "discover"
+        },
+        {
+            "role": "user",
+            "content": "la ingesta de datos por usuario y recomentdar",
+            "state": "discover"
+        },
+        {
+            "role": "assistant",
+            "content": "\u00bfQu\u00e9 tipo de limitaciones alimentarias tiene el usuario? (ejemplo: cirug\u00eda de manga gastrotica, intolerancia a gluten, al\u00e9rgicas a ciertos alimentos, etc.)",
+            "state": "discover"
+        }
+    ]
 }

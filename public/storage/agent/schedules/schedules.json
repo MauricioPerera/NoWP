@@ -48,5 +48,93 @@
         "run_count": 0,
         "error_count": 0,
         "created_at": "2026-03-22T19:25:28+01:00"
+    },
+    "NotificacionStockBajo": {
+        "id": "NotificacionStockBajo",
+        "name": [
+            {
+                "id": "step1",
+                "type": "ExecuteTool",
+                "tool": "entity_list",
+                "input": {
+                    "entity": "producto"
+                }
+            },
+            {
+                "id": "step2",
+                "type": "ExecuteTool",
+                "tool": "filter",
+                "input": {
+                    "field": "stock",
+                    "operator": "<",
+                    "value": 5
+                }
+            },
+            {
+                "id": "step3",
+                "type": "ExecuteTool",
+                "tool": "send_email",
+                "input": {
+                    "to": "admin@example.com",
+                    "subject": "Alerta de bajo stock",
+                    "body": "El producto {{producto.nombre}} ha bajado a un stock de 5 unidades o menos."
+                }
+            }
+        ],
+        "description": "",
+        "steps": "daily",
+        "input": null,
+        "interval": "hourly",
+        "interval_seconds": 3600,
+        "enabled": true,
+        "last_run": null,
+        "next_run": 1774206660,
+        "last_result": null,
+        "run_count": 0,
+        "error_count": 0,
+        "created_at": "2026-03-22T20:11:00+01:00"
+    },
+    "ReporteVentasDiario": {
+        "id": "ReporteVentasDiario",
+        "name": [
+            {
+                "id": "step1",
+                "type": "ExecuteTool",
+                "tool": "entity_list",
+                "input": {
+                    "entity": "venta"
+                }
+            },
+            {
+                "id": "step2",
+                "type": "ExecuteTool",
+                "tool": "aggregate",
+                "input": {
+                    "field": "fecha",
+                    "operation": "date",
+                    "group_by": "fecha"
+                }
+            },
+            {
+                "id": "step3",
+                "type": "ExportData",
+                "input": {
+                    "format": "csv",
+                    "destination": "/reportes/ventas_diarios/{{yesterday}}.csv"
+                }
+            }
+        ],
+        "description": "",
+        "steps": "daily",
+        "input": null,
+        "interval": "hourly",
+        "interval_seconds": 3600,
+        "enabled": true,
+        "last_run": null,
+        "next_run": 1774206660,
+        "last_result": null,
+        "run_count": 0,
+        "error_count": 0,
+        "created_at": "2026-03-22T20:11:00+01:00"
     }
 }
