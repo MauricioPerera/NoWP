@@ -167,6 +167,15 @@ class Application
                 \Framework\Search\SearchServiceProvider::registerRoutes($router, $this->container);
             }
         }
+
+        // Register Agent Service (chat + tools + workflows + memory)
+        $agentConfig = $this->config('agent', []);
+        if ($agentConfig['enabled'] ?? true) {
+            \Framework\Agent\AgentServiceProvider::register($this->container, $agentConfig);
+
+            $router = $this->container->resolve(Router::class);
+            \Framework\Agent\AgentServiceProvider::registerRoutes($router, $this->container);
+        }
     }
 
     /**
