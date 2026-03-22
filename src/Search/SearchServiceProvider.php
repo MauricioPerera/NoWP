@@ -48,7 +48,7 @@ class SearchServiceProvider
         if ($config['auto_index'] ?? true) {
             $autoIndexTypes = $config['auto_index_types'] ?? ['post', 'page'];
 
-            $hooks->addAction('content.saved', function ($content) use ($service, $autoIndexTypes) {
+            $indexFn = function ($content) use ($service, $autoIndexTypes) {
                 if (!in_array($content->getType(), $autoIndexTypes, true)) {
                     return;
                 }
@@ -61,7 +61,10 @@ class SearchServiceProvider
                 } catch (\Throwable $e) {
                     error_log("[Search] Failed to index content {$content->getId()}: {$e->getMessage()}");
                 }
-            });
+            };
+
+            $hooks->addAction('content.created', $indexFn);
+            $hooks->addAction('content.updated', $indexFn);
 
             $hooks->addAction('content.deleted', function ($content) use ($service) {
                 $service->remove($content->getType(), (string) $content->getId());

@@ -148,8 +148,25 @@ class Application
             return new ExceptionHandler($debug, $logPath);
         });
 
-        // Additional service providers can be added here
-        // Example: $this->registerProvider(new DatabaseServiceProvider());
+        // Register Search Service (semantic search via php-vector-store)
+        $searchConfig = $this->config('search', []);
+        if ($searchConfig['enabled'] ?? true) {
+            if (class_exists(\PHPVectorStore\VectorStore::class)) {
+                $hooks = $this->container->has(\Framework\Plugin\HookSystem::class)
+                    ? $this->container->get(\Framework\Plugin\HookSystem::class)
+                    : new \Framework\Plugin\HookSystem();
+
+                \Framework\Search\SearchServiceProvider::register(
+                    $this->container,
+                    $hooks,
+                    $searchConfig
+                );
+
+                // Register search routes
+                $router = $this->container->resolve(Router::class);
+                \Framework\Search\SearchServiceProvider::registerRoutes($router, $this->container);
+            }
+        }
     }
 
     /**

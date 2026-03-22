@@ -23,6 +23,41 @@ class Content
         public ?string $translationGroup = null
     ) {}
 
+    public function getId(): int
+    {
+        return $this->id;
+    }
+
+    public function getTitle(): string
+    {
+        return $this->title;
+    }
+
+    public function getSlug(): string
+    {
+        return $this->slug;
+    }
+
+    public function getBody(): string
+    {
+        return $this->content;
+    }
+
+    public function getType(): string
+    {
+        return $this->type->value;
+    }
+
+    public function getStatus(): string
+    {
+        return $this->status->value;
+    }
+
+    public function getCustomFields(): array
+    {
+        return $this->customFields;
+    }
+
     public function toArray(): array
     {
         return [
