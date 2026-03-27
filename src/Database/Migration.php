@@ -11,7 +11,7 @@
 
 declare(strict_types=1);
 
-namespace Framework\Database;
+namespace ChimeraNoWP\Database;
 
 abstract class Migration
 {
@@ -51,6 +51,7 @@ abstract class Migration
     public function getName(): string
     {
         $className = get_class($this);
-        return substr($className, strrpos($className, '\\') + 1);
+        $pos = strrpos($className, '\\');
+        return $pos === false ? $className : substr($className, $pos + 1);
     }
 }

@@ -13,10 +13,10 @@
 
 declare(strict_types=1);
 
-namespace Framework\Search;
+namespace ChimeraNoWP\Search;
 
-use Framework\Core\Request;
-use Framework\Content\ContentRepository;
+use ChimeraNoWP\Core\Request;
+use ChimeraNoWP\Content\ContentRepository;
 
 class SearchController
 {

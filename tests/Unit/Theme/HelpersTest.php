@@ -136,7 +136,7 @@ it('checks if path is active', function () {
 
 it('gets theme config value', function () {
     global $themeManager;
-    $themeManager = new \Framework\Theme\ThemeManager(BASE_PATH . '/themes');
+    $themeManager = new \ChimeraNoWP\Theme\ThemeManager(BASE_PATH . '/themes');
     $themeManager->loadTheme('default');
     
     expect(theme_config('name'))->toBe('Default Theme')
@@ -145,7 +145,7 @@ it('gets theme config value', function () {
 
 it('returns default for missing theme config', function () {
     global $themeManager;
-    $themeManager = new \Framework\Theme\ThemeManager(BASE_PATH . '/themes');
+    $themeManager = new \ChimeraNoWP\Theme\ThemeManager(BASE_PATH . '/themes');
     $themeManager->loadTheme('default');
     
     expect(theme_config('missing', 'default'))->toBe('default');

@@ -1,6 +1,8 @@
 <?php
 
-namespace Framework\Core;
+declare(strict_types=1);
+
+namespace ChimeraNoWP\Core;
 
 /**
  * Route Class
@@ -37,6 +39,11 @@ class Route
     private array $middleware = [];
 
     /**
+     * Cached compiled regex pattern
+     */
+    private ?string $compiledRegex = null;
+
+    /**
      * Create a new Route instance
      * 
      * @param string $method
@@ -63,10 +70,12 @@ class Route
             return false;
         }
 
-        // Convert route pattern to regex
-        $pattern = $this->convertToRegex($this->path);
+        // Convert route pattern to regex (cached)
+        if ($this->compiledRegex === null) {
+            $this->compiledRegex = $this->convertToRegex($this->path);
+        }
 
-        if (preg_match($pattern, $path, $matches)) {
+        if (preg_match($this->compiledRegex, $path, $matches)) {
             // Extract named parameters
             $this->parameters = array_filter($matches, 'is_string', ARRAY_FILTER_USE_KEY);
             return true;
@@ -111,26 +120,34 @@ class Route
         }
         
         // Execute the pipeline with the route handler as the destination
+        // Pass the (possibly middleware-modified) $request to executeHandler
         return $pipeline->handle($request, function (Request $request) use ($container): Response {
-            return $this->executeHandler($container);
+            return $this->executeHandler($container, $request);
         });
     }
 
     /**
      * Execute the route handler
-     * 
+     *
      * @param Container $container
+     * @param Request|null $request Middleware-modified request (preferred over container's copy)
      * @return Response
      */
-    private function executeHandler(Container $container): Response
+    private function executeHandler(Container $container, ?Request $request = null): Response
     {
-        // Get request from container for injection
-        $request = $container->has(Request::class) ? $container->get(Request::class) : null;
-        $args = $request ? array_merge([$request], $this->parameters) : $this->parameters;
+        // Use the middleware-modified request; fall back to container copy
+        if ($request === null) {
+            $request = $container->has(Request::class) ? $container->get(Request::class) : null;
+        }
+        if ($request) {
+            $args = [$request, ...(is_array($this->parameters) ? array_values($this->parameters) : [])];
+        } else {
+            $args = array_values($this->parameters);
+        }
 
         // Execute the handler
         if (is_callable($this->handler)) {
-            $result = call_user_func($this->handler, ...$args);
+            $result = call_user_func_array($this->handler, $args);
         } elseif (is_array($this->handler)) {
             [$controller, $method] = $this->handler;
 
@@ -139,7 +156,7 @@ class Route
                 $controller = $container->resolve($controller);
             }
 
-            $result = call_user_func([$controller, $method], ...$args);
+            $result = call_user_func_array([$controller, $method], $args);
         } else {
             throw new \RuntimeException('Invalid route handler');
         }

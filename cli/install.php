@@ -86,7 +86,7 @@ $config = [
     'retry' => ['attempts' => 3, 'delay' => 100],
 ];
 
-$connection = new \Framework\Database\Connection($config);
+$connection = new \ChimeraNoWP\Database\Connection($config);
 
 foreach ($files as $file) {
     $name = basename($file, '.php');

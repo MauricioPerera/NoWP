@@ -15,7 +15,7 @@ require_once __DIR__ . '/../../../../src/Database/Connection.php';
 require_once __DIR__ . '/../../../../migrations/2026_01_15_000001_create_users_table.php';
 require_once __DIR__ . '/../../../../migrations/2026_01_15_000003_create_media_table.php';
 
-use Framework\Database\Connection;
+use ChimeraNoWP\Database\Connection;
 
 beforeEach(function () {
     $config = [

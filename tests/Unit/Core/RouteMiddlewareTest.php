@@ -1,10 +1,10 @@
 <?php
 
-use Framework\Core\Container;
-use Framework\Core\MiddlewareInterface;
-use Framework\Core\Request;
-use Framework\Core\Response;
-use Framework\Core\Route;
+use ChimeraNoWP\Core\Container;
+use ChimeraNoWP\Core\MiddlewareInterface;
+use ChimeraNoWP\Core\Request;
+use ChimeraNoWP\Core\Response;
+use ChimeraNoWP\Core\Route;
 
 beforeEach(function () {
     $this->container = new Container();

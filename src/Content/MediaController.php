@@ -10,14 +10,14 @@
 
 declare(strict_types=1);
 
-namespace Framework\Content;
+namespace ChimeraNoWP\Content;
 
-use Framework\Core\Request;
-use Framework\Core\Response;
-use Framework\Storage\FileManager;
-use Framework\Storage\ImageProcessor;
-use Framework\Database\Connection;
-use Framework\Database\QueryBuilder;
+use ChimeraNoWP\Core\Request;
+use ChimeraNoWP\Core\Response;
+use ChimeraNoWP\Storage\FileManager;
+use ChimeraNoWP\Storage\ImageProcessor;
+use ChimeraNoWP\Database\Connection;
+use ChimeraNoWP\Database\QueryBuilder;
 
 class MediaController
 {
@@ -25,9 +25,14 @@ class MediaController
         private FileManager $fileManager,
         private ImageProcessor $imageProcessor,
         private Connection $connection,
-        private ?QueryBuilder $queryBuilder = null
-    ) {
-        $this->queryBuilder = $queryBuilder ?? new QueryBuilder($connection);
+    ) {}
+
+    /**
+     * Create a fresh QueryBuilder to avoid state leakage between queries.
+     */
+    private function newQuery(): QueryBuilder
+    {
+        return new QueryBuilder($this->connection);
     }
     
     /**
@@ -145,13 +150,13 @@ class MediaController
         try {
             // Get query parameters
             $page = (int) $request->query('page', 1);
-            $perPage = (int) $request->query('per_page', 20);
+            $perPage = min((int) $request->query('per_page', 20), 100);
             $mimeType = $request->query('mime_type');
             
             $offset = ($page - 1) * $perPage;
             
             // Build query
-            $query = $this->queryBuilder->table('media')
+            $query = $this->newQuery()->table('media')
                 ->select(['*'])
                 ->orderBy('uploaded_at', 'desc')
                 ->limit($perPage)
@@ -204,7 +209,7 @@ class MediaController
     public function show(int $id): Response
     {
         try {
-            $row = $this->queryBuilder->table('media')
+            $row = $this->newQuery()->table('media')
                 ->select(['*'])
                 ->where('id', $id)
                 ->first();
@@ -249,7 +254,7 @@ class MediaController
     {
         try {
             // Get media record
-            $row = $this->queryBuilder->table('media')
+            $row = $this->newQuery()->table('media')
                 ->select(['*'])
                 ->where('id', $id)
                 ->first();
@@ -267,7 +272,7 @@ class MediaController
             // TODO: Load thumbnail paths from database or generate them
             
             // Delete from database
-            $this->queryBuilder->table('media')
+            $this->newQuery()->table('media')
                 ->where('id', $id)
                 ->delete();
             

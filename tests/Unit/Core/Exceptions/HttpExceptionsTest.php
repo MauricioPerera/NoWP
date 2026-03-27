@@ -1,11 +1,11 @@
 <?php
 
-use Framework\Core\Exceptions\ValidationException;
-use Framework\Core\Exceptions\AuthenticationException;
-use Framework\Core\Exceptions\AuthorizationException;
-use Framework\Core\Exceptions\NotFoundException;
-use Framework\Core\Exceptions\RateLimitException;
-use Framework\Core\Exceptions\ServerException;
+use ChimeraNoWP\Core\Exceptions\ValidationException;
+use ChimeraNoWP\Core\Exceptions\AuthenticationException;
+use ChimeraNoWP\Core\Exceptions\AuthorizationException;
+use ChimeraNoWP\Core\Exceptions\NotFoundException;
+use ChimeraNoWP\Core\Exceptions\RateLimitException;
+use ChimeraNoWP\Core\Exceptions\ServerException;
 
 it('creates validation exception with errors', function () {
     $errors = ['email' => 'Invalid email format'];

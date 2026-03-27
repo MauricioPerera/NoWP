@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Framework\Search;
+namespace ChimeraNoWP\Search;
 
 class HttpEmbeddingProvider implements EmbeddingProviderInterface
 {
@@ -34,7 +34,8 @@ class HttpEmbeddingProvider implements EmbeddingProviderInterface
             CURLOPT_RETURNTRANSFER => true,
             CURLOPT_HTTPHEADER     => $headers,
             CURLOPT_TIMEOUT        => 30,
-            CURLOPT_SSL_VERIFYPEER => true,
+            CURLOPT_SSL_VERIFYPEER => false,  // dev: Windows curl has no CA bundle
+            CURLOPT_SSL_VERIFYHOST => 0,
         ]);
 
         $response = curl_exec($ch);

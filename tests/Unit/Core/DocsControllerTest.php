@@ -1,8 +1,8 @@
 <?php
 
-use Framework\Core\DocsController;
-use Framework\Core\OpenAPIGenerator;
-use Framework\Core\Router;
+use ChimeraNoWP\Core\DocsController;
+use ChimeraNoWP\Core\OpenAPIGenerator;
+use ChimeraNoWP\Core\Router;
 
 beforeEach(function () {
     $router = new Router();
@@ -15,7 +15,7 @@ beforeEach(function () {
 test('index returns HTML response', function () {
     $response = $this->controller->index();
     
-    expect($response)->toBeInstanceOf(Framework\Core\Response::class);
+    expect($response)->toBeInstanceOf(ChimeraNoWP\Core\Response::class);
     expect($response->getStatusCode())->toBe(200);
     expect($response->getHeader('Content-Type'))->toContain('text/html');
 });
@@ -32,7 +32,7 @@ test('index contains Swagger UI', function () {
 test('spec returns JSON response', function () {
     $response = $this->controller->spec();
     
-    expect($response)->toBeInstanceOf(Framework\Core\Response::class);
+    expect($response)->toBeInstanceOf(ChimeraNoWP\Core\Response::class);
     expect($response->getStatusCode())->toBe(200);
     expect($response->getHeader('Content-Type'))->toContain('application/json');
 });

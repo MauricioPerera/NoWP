@@ -10,9 +10,9 @@
 
 declare(strict_types=1);
 
-namespace Framework\Core\Exceptions;
+namespace ChimeraNoWP\Core\Exceptions;
 
-use Framework\Core\Response;
+use ChimeraNoWP\Core\Response;
 use Exception;
 
 abstract class HttpException extends Exception

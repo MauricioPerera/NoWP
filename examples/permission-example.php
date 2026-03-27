@@ -9,12 +9,12 @@
 
 require_once __DIR__ . '/../vendor/autoload.php';
 
-use Framework\Auth\User;
-use Framework\Auth\UserRole;
-use Framework\Auth\PermissionMiddleware;
-use Framework\Core\Router;
-use Framework\Core\Request;
-use Framework\Core\Response;
+use ChimeraNoWP\Auth\User;
+use ChimeraNoWP\Auth\UserRole;
+use ChimeraNoWP\Auth\PermissionMiddleware;
+use ChimeraNoWP\Core\Router;
+use ChimeraNoWP\Core\Request;
+use ChimeraNoWP\Core\Response;
 
 // ============================================================================
 // 1. Creating Users with Different Roles

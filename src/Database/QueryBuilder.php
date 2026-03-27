@@ -11,7 +11,7 @@
 
 declare(strict_types=1);
 
-namespace Framework\Database;
+namespace ChimeraNoWP\Database;
 
 use PDO;
 
@@ -71,6 +71,11 @@ class QueryBuilder
      */
     public function where(string $column, mixed $value, string $operator = '='): self
     {
+        $validOperators = ['=', '!=', '<', '>', '<=', '>=', 'LIKE', 'NOT LIKE', 'IN', 'NOT IN', 'IS', 'IS NOT', 'BETWEEN'];
+        if (!in_array(strtoupper($operator), $validOperators)) {
+            throw new \InvalidArgumentException("Invalid SQL operator: {$operator}");
+        }
+
         $this->wheres[] = [
             'type' => 'basic',
             'column' => $column,
@@ -78,7 +83,7 @@ class QueryBuilder
             'value' => $value,
             'boolean' => 'AND'
         ];
-        
+
         return $this;
     }
     
@@ -152,10 +157,29 @@ class QueryBuilder
             'column' => $column,
             'boolean' => 'AND'
         ];
-        
+
         return $this;
     }
-    
+
+    /**
+     * Add a raw WHERE clause
+     *
+     * @param string $expression Raw SQL expression with ? placeholders
+     * @param array $bindings Parameter bindings
+     * @return self
+     */
+    public function whereRaw(string $expression, array $bindings = []): self
+    {
+        $this->wheres[] = [
+            'type' => 'raw',
+            'expression' => $expression,
+            'bindings' => $bindings,
+            'boolean' => 'AND'
+        ];
+
+        return $this;
+    }
+
     /**
      * Add a JOIN clause
      *
@@ -212,11 +236,16 @@ class QueryBuilder
      */
     public function orderBy(string $column, string $direction = 'asc'): self
     {
+        $direction = strtoupper($direction);
+        if (!in_array($direction, ['ASC', 'DESC'])) {
+            $direction = 'ASC';
+        }
+
         $this->orderBys[] = [
             'column' => $column,
-            'direction' => strtoupper($direction)
+            'direction' => $direction
         ];
-        
+
         return $this;
     }
     
@@ -460,6 +489,11 @@ class QueryBuilder
                     
                 case 'not_null':
                     $conditions[] = $boolean . "{$where['column']} IS NOT NULL";
+                    break;
+
+                case 'raw':
+                    $conditions[] = $boolean . $where['expression'];
+                    $this->bindings = array_merge($this->bindings, $where['bindings']);
                     break;
             }
         }

@@ -9,7 +9,7 @@
 
 declare(strict_types=1);
 
-namespace Framework\Agent\Integration;
+namespace ChimeraNoWP\Agent\Integration;
 
 class ServiceDefinition
 {

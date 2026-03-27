@@ -1,9 +1,10 @@
 <?php
 
 /**
- * Agent Configuration
+ * Agent Configuration — Chimera NoWP
  *
- * Configure the AI agent: provider, tools, memory, and workflow engine.
+ * Unified config for the Chimera agent engine + NoWP CMS integration.
+ * Supports 4 LLM providers: Ollama, Cloudflare Workers AI, OpenRouter, OpenAI.
  */
 
 return [
@@ -11,67 +12,50 @@ return [
     'enabled' => env('AGENT_ENABLED', true),
 
     // Agent identifier (for memory scoping)
-    'id' => env('AGENT_ID', 'nowp-agent'),
+    'id' => env('AGENT_ID', 'chimera'),
 
-    // System prompt — defines the agent's personality and capabilities
-    'system_prompt' => env('AGENT_SYSTEM_PROMPT',
-        'You are a helpful assistant for this website. You can search content, ' .
-        'manage posts, and remember information across conversations. ' .
-        'Use your tools to help the user.'
-    ),
+    // System prompt
+    'system_prompt' => env('AGENT_SYSTEM_PROMPT', ''),
 
-    // AI Provider
+    // AI Provider: ollama | cloudflare | openrouter | openai
     'provider' => env('AGENT_PROVIDER', 'ollama'),
+
+    // Max agent loop iterations (anti-runaway protection)
+    'max_iterations' => (int) env('AGENT_MAX_ITERATIONS', 25),
+
+    // Data directory for agent storage (sessions, etc)
+    'data_dir' => env('AGENT_DATA_DIR', 'storage/agent'),
 
     'providers' => [
         'ollama' => [
             'host'        => env('OLLAMA_HOST', 'http://localhost:11434'),
-            'model'       => env('OLLAMA_MODEL', 'llama3.1'),
-            'temperature' => env('OLLAMA_TEMPERATURE', 0.7),
-        ],
-        'openai' => [
-            'url'         => 'https://api.openai.com/v1/chat/completions',
-            'api_key'     => env('OPENAI_API_KEY', ''),
-            'model'       => env('OPENAI_MODEL', 'gpt-4o-mini'),
-            'temperature' => 0.7,
-            'max_tokens'  => 4096,
-        ],
-        'openrouter' => [
-            'url'         => 'https://openrouter.ai/api/v1/chat/completions',
-            'api_key'     => env('OPENROUTER_API_KEY', ''),
-            'model'       => env('OPENROUTER_MODEL', 'anthropic/claude-sonnet-4'),
-            'temperature' => 0.7,
-            'max_tokens'  => 4096,
+            'model'       => env('OLLAMA_MODEL', 'qwen2.5:7b'),
+            'temperature' => (float) env('OLLAMA_TEMPERATURE', 0.7),
         ],
         'cloudflare' => [
-            'url'         => 'https://api.cloudflare.com/client/v4/accounts/' . env('CF_ACCOUNT_ID', '') . '/ai/v1/chat/completions',
-            'api_key'     => env('CF_AI_API_KEY', ''),
-            'model'       => env('CF_AI_MODEL', '@cf/meta/llama-3.3-70b-instruct-fp8-fast'),
-            'temperature' => 0.7,
-            'max_tokens'  => 4096,
+            'account_id'  => env('CF_ACCOUNT_ID', ''),
+            'api_token'   => env('CF_API_TOKEN', ''),
+            'model'       => env('CF_AI_MODEL', '@cf/ibm-granite/granite-4.0-h-micro'),
         ],
-        'custom' => [
-            'url'         => env('AGENT_API_URL', ''),
-            'api_key'     => env('AGENT_API_KEY', ''),
-            'model'       => env('AGENT_MODEL', ''),
-            'temperature' => env('AGENT_TEMPERATURE', 0.7),
-            'max_tokens'  => env('AGENT_MAX_TOKENS', 4096),
+        'openrouter' => [
+            'api_key'     => env('OPENROUTER_API_KEY', ''),
+            'model'       => env('OPENROUTER_MODEL', 'nousresearch/hermes-4-scout'),
+        ],
+        'openai' => [
+            'api_key'     => env('OPENAI_API_KEY', ''),
+            'model'       => env('OPENAI_MODEL', 'gpt-4o-mini'),
+            'temperature' => (float) env('OPENAI_TEMPERATURE', 0.7),
         ],
     ],
 
-    // Memory storage path
+    // Memory storage path (5 collections: memories, skills, knowledge, sessions, profiles)
     'memory_path' => env('AGENT_MEMORY_PATH', 'storage/agent/memory'),
-
-    // Enable persistent memory across sessions
     'memory_enabled' => env('AGENT_MEMORY_ENABLED', true),
 
-    // Built-in tools to register automatically
-    'builtin_tools' => [
-        'search_content',  // Semantic search across site content
-        'get_content',     // Get content by ID
-        'create_content',  // Create new content
-        'remember',        // Save a memory
-        'recall',          // Recall memories
-        'run_workflow',    // Execute a workflow
-    ],
+    // Paths for A2 subsystems
+    'integration_path' => env('AGENT_INTEGRATION_PATH', 'storage/agent/integrations'),
+    'scheduler_path'   => env('AGENT_SCHEDULER_PATH', 'storage/agent/schedules'),
+    'pages_path'       => env('AGENT_PAGES_PATH', 'storage/agent/pages'),
+    'projects_path'    => env('AGENT_PROJECTS_PATH', 'storage/projects'),
+    'scaffolding_path' => env('AGENT_SCAFFOLDING_PATH', 'storage/agent/scaffolding'),
 ];

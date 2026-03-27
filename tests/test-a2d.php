@@ -8,7 +8,7 @@
 
 // Manual autoload for testing without Composer
 spl_autoload_register(function ($class) {
-    $prefix = 'Framework\\';
+    $prefix = 'ChimeraNoWP\\';
     $baseDir = __DIR__ . '/../src/';
     $len = strlen($prefix);
     if (strncmp($prefix, $class, $len) !== 0) return;
@@ -17,9 +17,9 @@ spl_autoload_register(function ($class) {
     if (file_exists($file)) require $file;
 });
 
-use Framework\Agent\Data\EntitySchema;
-use Framework\Agent\Data\EntityMaterializer;
-use Framework\Database\Connection;
+use ChimeraNoWP\Agent\Data\EntitySchema;
+use ChimeraNoWP\Agent\Data\EntityMaterializer;
+use ChimeraNoWP\Database\Connection;
 
 echo "A2D Integration Test\n";
 echo "====================\n\n";

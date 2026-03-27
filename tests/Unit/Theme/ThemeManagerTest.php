@@ -1,6 +1,6 @@
 <?php
 
-use Framework\Theme\ThemeManager;
+use ChimeraNoWP\Theme\ThemeManager;
 
 beforeEach(function () {
     $this->themesPath = BASE_PATH . '/themes';

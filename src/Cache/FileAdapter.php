@@ -11,7 +11,7 @@
 
 declare(strict_types=1);
 
-namespace Framework\Cache;
+namespace ChimeraNoWP\Cache;
 
 class FileAdapter implements CacheAdapterInterface
 {
@@ -42,7 +42,15 @@ class FileAdapter implements CacheAdapterInterface
             return null;
         }
         
-        $data = unserialize($content);
+        $data = unserialize($content, ['allowed_classes' => [
+            \ChimeraNoWP\Content\Content::class,
+            \ChimeraNoWP\Content\ContentType::class,
+            \ChimeraNoWP\Content\ContentStatus::class,
+            \ChimeraNoWP\Content\Media::class,
+            \ChimeraNoWP\Auth\User::class,
+            \ChimeraNoWP\Auth\UserRole::class,
+            \DateTime::class,
+        ]]);
         
         // Check if expired
         if ($data['expires_at'] < time()) {

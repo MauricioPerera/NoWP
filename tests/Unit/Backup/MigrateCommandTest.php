@@ -1,7 +1,7 @@
 <?php
 
-use Framework\Backup\MigrateCommand;
-use Framework\Database\Connection;
+use ChimeraNoWP\Backup\MigrateCommand;
+use ChimeraNoWP\Database\Connection;
 
 beforeEach(function () {
     $this->connection = new Connection([
@@ -27,7 +27,9 @@ beforeEach(function () {
         CREATE TABLE contents (
             id INTEGER PRIMARY KEY,
             title TEXT NOT NULL,
-            content TEXT
+            content TEXT,
+            locale VARCHAR(10) DEFAULT 'en',
+            translation_group VARCHAR(50) DEFAULT NULL
         )
     ");
     

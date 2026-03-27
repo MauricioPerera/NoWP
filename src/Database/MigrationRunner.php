@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Framework\Database;
+namespace ChimeraNoWP\Database;
 
 use RuntimeException;
 use DirectoryIterator;
@@ -21,13 +21,24 @@ class MigrationRunner
 
     public function createMigrationsTable(): void
     {
-        $query = "CREATE TABLE IF NOT EXISTS {$this->migrationsTable} (
-            id INT PRIMARY KEY AUTO_INCREMENT,
-            migration VARCHAR(255) NOT NULL UNIQUE,
-            batch INT NOT NULL,
-            executed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            INDEX idx_batch (batch)
-        )";
+        $driver = $this->connection->getDriver();
+
+        if ($driver === 'sqlite') {
+            $query = "CREATE TABLE IF NOT EXISTS {$this->migrationsTable} (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                migration VARCHAR(255) NOT NULL UNIQUE,
+                batch INTEGER NOT NULL,
+                executed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )";
+        } else {
+            $query = "CREATE TABLE IF NOT EXISTS {$this->migrationsTable} (
+                id INT PRIMARY KEY AUTO_INCREMENT,
+                migration VARCHAR(255) NOT NULL UNIQUE,
+                batch INT NOT NULL,
+                executed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                INDEX idx_batch (batch)
+            )";
+        }
 
         $this->connection->execute($query);
     }
@@ -211,21 +222,49 @@ class MigrationRunner
 
         require_once $filePath;
 
+        // Try the migration name directly first (for test migrations)
         $className = $migrationName;
 
+        // If not found, extract class name from file (for timestamped migrations like 2026_01_15_000001_create_users_table)
         if (!class_exists($className)) {
-            throw new RuntimeException("Migration class not found: {$className}");
+            $className = $this->resolveClassName($migrationName, $filePath);
+        }
+
+        if (!class_exists($className)) {
+            throw new RuntimeException("Migration class not found: {$migrationName}");
         }
 
         $migration = new $className($this->connection);
 
         if (!$migration instanceof Migration) {
             throw new RuntimeException(
-                "Migration class must extend Framework\\Database\\Migration: {$className}"
+                "Migration class must extend Migration: {$className}"
             );
         }
 
         return $migration;
+    }
+
+    private function resolveClassName(string $migrationName, string $filePath): string
+    {
+        // Try converting timestamp format: 2026_01_15_000001_create_users_table -> CreateUsersTable
+        $parts = explode('_', $migrationName);
+        // Skip timestamp parts (first 4 segments: year, month, day, sequence)
+        if (count($parts) > 4 && is_numeric($parts[0]) && is_numeric($parts[3])) {
+            $nameParts = array_slice($parts, 4);
+            $className = implode('', array_map('ucfirst', $nameParts));
+            if (class_exists($className)) {
+                return $className;
+            }
+        }
+
+        // Fallback: scan file for class declaration
+        $content = file_get_contents($filePath);
+        if (preg_match('/class\s+(\w+)\s+extends/', $content, $matches)) {
+            return $matches[1];
+        }
+
+        return $migrationName;
     }
 
     private function recordMigration(string $migrationName, int $batch): void

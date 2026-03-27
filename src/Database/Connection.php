@@ -11,7 +11,7 @@
 
 declare(strict_types=1);
 
-namespace Framework\Database;
+namespace ChimeraNoWP\Database;
 
 use PDO;
 use PDOException;
@@ -123,9 +123,15 @@ class Connection
                 $connection['options']
             );
             
-            // Set collation if specified (MySQL only)
+            // Set collation if specified (MySQL only) — validated against whitelist
             if (!empty($connection['collation'])) {
-                $pdo->exec("SET NAMES '{$connection['charset']}' COLLATE '{$connection['collation']}'");
+                $validCharsets = ['utf8mb4', 'utf8', 'latin1', 'ascii', 'binary'];
+                $charset = $connection['charset'];
+                if (!in_array($charset, $validCharsets, true)) {
+                    throw new \InvalidArgumentException("Invalid charset: {$charset}");
+                }
+                $collation = preg_replace('/[^a-zA-Z0-9_]/', '', $connection['collation']);
+                $pdo->exec("SET NAMES '{$charset}' COLLATE '{$collation}'");
             }
         }
         

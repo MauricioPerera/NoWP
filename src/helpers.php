@@ -122,7 +122,7 @@ if (!function_exists('__')) {
         static $translator = null;
         
         if ($translator === null) {
-            $translator = new \Framework\Core\TranslationManager();
+            $translator = new \ChimeraNoWP\Core\TranslationManager();
         }
         
         return $translator->translate($key, $replacements, $locale);

@@ -1,6 +1,8 @@
 <?php
 
-namespace Framework\Core;
+declare(strict_types=1);
+
+namespace ChimeraNoWP\Core;
 
 use Closure;
 use ReflectionClass;
@@ -33,6 +35,12 @@ class Container
      * @var array<string, object>
      */
     private array $instances = [];
+
+    /**
+     * Cached ReflectionClass instances
+     * @var array<string, ReflectionClass>
+     */
+    private static array $reflectionCache = [];
 
     /**
      * Register a binding in the container (transient)
@@ -116,7 +124,10 @@ class Container
     private function build(string $concrete): object
     {
         try {
-            $reflector = new ReflectionClass($concrete);
+            if (!isset(self::$reflectionCache[$concrete])) {
+                self::$reflectionCache[$concrete] = new ReflectionClass($concrete);
+            }
+            $reflector = self::$reflectionCache[$concrete];
         } catch (ReflectionException $e) {
             throw new ContainerException(
                 "Cannot resolve class [{$concrete}]: {$e->getMessage()}",

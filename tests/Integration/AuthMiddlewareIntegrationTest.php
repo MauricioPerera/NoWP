@@ -1,11 +1,11 @@
 <?php
 
-use Framework\Auth\AuthMiddleware;
-use Framework\Auth\JWTManager;
-use Framework\Core\Container;
-use Framework\Core\MiddlewarePipeline;
-use Framework\Core\Request;
-use Framework\Core\Response;
+use ChimeraNoWP\Auth\AuthMiddleware;
+use ChimeraNoWP\Auth\JWTManager;
+use ChimeraNoWP\Core\Container;
+use ChimeraNoWP\Core\MiddlewarePipeline;
+use ChimeraNoWP\Core\Request;
+use ChimeraNoWP\Core\Response;
 
 describe('AuthMiddleware Integration', function () {
     beforeEach(function () {
@@ -46,8 +46,8 @@ describe('AuthMiddleware Integration', function () {
             // Access user data in the handler
             $user = $request->user();
             return Response::success([
-                'message' => "Hello {$user['email']}",
-                'role' => $user['role']
+                'message' => "Hello {$user->email}",
+                'role' => $user->role->value
             ]);
         };
 
@@ -78,7 +78,7 @@ describe('AuthMiddleware Integration', function () {
         // Add a role check middleware after auth
         $pipeline->pipe(function ($request, $next) {
             $user = $request->user();
-            if ($user['role'] !== 'editor') {
+            if ($user->role->value !== 'editor') {
                 return Response::error('Forbidden', 'FORBIDDEN', 403);
             }
             return $next($request);
@@ -93,7 +93,7 @@ describe('AuthMiddleware Integration', function () {
         $destination = function ($request) {
             return Response::success([
                 'logged' => $request->getAttribute('logged'),
-                'user_id' => $request->user()['id']
+                'user_id' => $request->user()->id
             ]);
         };
 

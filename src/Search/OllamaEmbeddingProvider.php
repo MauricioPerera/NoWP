@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Framework\Search;
+namespace ChimeraNoWP\Search;
 
 class OllamaEmbeddingProvider implements EmbeddingProviderInterface
 {

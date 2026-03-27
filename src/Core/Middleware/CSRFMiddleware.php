@@ -10,21 +10,23 @@
 
 declare(strict_types=1);
 
-namespace Framework\Core\Middleware;
+namespace ChimeraNoWP\Core\Middleware;
 
-use Framework\Core\MiddlewareInterface;
-use Framework\Core\Request;
-use Framework\Core\Response;
-use Framework\Core\Exceptions\AuthorizationException;
+use ChimeraNoWP\Core\MiddlewareInterface;
+use ChimeraNoWP\Core\Request;
+use ChimeraNoWP\Core\Response;
+use ChimeraNoWP\Core\Exceptions\AuthorizationException;
 
 class CSRFMiddleware implements MiddlewareInterface
 {
     private string $tokenKey = 'csrf_token';
     private string $headerName = 'X-CSRF-Token';
-    private static ?string $storedToken = null;
-    
+
     public function handle(Request $request, callable $next): Response
     {
+        if (session_status() === PHP_SESSION_NONE) {
+            session_start();
+        }
         // Only check CSRF for state-changing methods
         if (in_array($request->getMethod(), ['POST', 'PUT', 'DELETE', 'PATCH'])) {
             $this->validateToken($request);
@@ -91,25 +93,29 @@ class CSRFMiddleware implements MiddlewareInterface
     }
     
     /**
-     * Store token (in-memory for now, should use session in production)
+     * Store token in session
      *
      * @param string $token
      * @return void
      */
     private function storeToken(string $token): void
     {
-        // In a real application, this would use session storage
-        self::$storedToken = $token;
+        if (session_status() === PHP_SESSION_NONE) {
+            session_start();
+        }
+        $_SESSION['csrf_token'] = $token;
     }
-    
+
     /**
-     * Get stored token
+     * Get stored token from session
      *
      * @return string|null
      */
     private function getStoredToken(): ?string
     {
-        // In a real application, this would retrieve from session
-        return self::$storedToken;
+        if (session_status() === PHP_SESSION_NONE) {
+            session_start();
+        }
+        return $_SESSION['csrf_token'] ?? null;
     }
 }

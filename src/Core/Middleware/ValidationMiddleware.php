@@ -10,12 +10,12 @@
 
 declare(strict_types=1);
 
-namespace Framework\Core\Middleware;
+namespace ChimeraNoWP\Core\Middleware;
 
-use Framework\Core\MiddlewareInterface;
-use Framework\Core\Request;
-use Framework\Core\Response;
-use Framework\Core\Exceptions\ValidationException;
+use ChimeraNoWP\Core\MiddlewareInterface;
+use ChimeraNoWP\Core\Request;
+use ChimeraNoWP\Core\Response;
+use ChimeraNoWP\Core\Exceptions\ValidationException;
 
 class ValidationMiddleware implements MiddlewareInterface
 {
@@ -32,14 +32,17 @@ class ValidationMiddleware implements MiddlewareInterface
         if (!empty($this->rules)) {
             // Sanitize and get all data
             $data = $this->sanitizeData($request->all());
-            
+
             $errors = $this->validate($data, $this->rules);
-            
+
             if (!empty($errors)) {
                 throw new ValidationException('Validation failed', $errors);
             }
+
+            // Inject sanitized data back into the request
+            $request = $request->withBody($data);
         }
-        
+
         return $next($request);
     }
     
@@ -58,18 +61,6 @@ class ValidationMiddleware implements MiddlewareInterface
         }
         
         return $sanitized;
-    }
-    
-    /**
-     * Sanitize request data
-     *
-     * @param Request $request
-     * @return void
-     */
-    private function sanitizeRequest(Request $request): void
-    {
-        // Note: Request properties are readonly
-        // Sanitization is handled in sanitizeData() method
     }
     
     /**

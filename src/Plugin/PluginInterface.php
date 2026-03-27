@@ -11,7 +11,7 @@
 
 declare(strict_types=1);
 
-namespace Framework\Plugin;
+namespace ChimeraNoWP\Plugin;
 
 interface PluginInterface
 {

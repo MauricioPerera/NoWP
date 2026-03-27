@@ -6,7 +6,7 @@
 
 declare(strict_types=1);
 
-use Framework\Database\Connection;
+use ChimeraNoWP\Database\Connection;
 
 beforeEach(function () {
     // Use SQLite in-memory database for unit tests

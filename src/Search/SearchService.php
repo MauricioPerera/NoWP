@@ -17,7 +17,7 @@
 
 declare(strict_types=1);
 
-namespace Framework\Search;
+namespace ChimeraNoWP\Search;
 
 use PHPVectorStore\QuantizedStore;
 use PHPVectorStore\VectorStore;
@@ -80,7 +80,7 @@ class SearchService
      * Index a NoWP Content object.
      * Combines title + body + custom fields into a single embedding.
      */
-    public function indexContent(\Framework\Content\Content $content): void
+    public function indexContent(\ChimeraNoWP\Content\Content $content): void
     {
         $text = $content->getTitle() . "\n\n" . strip_tags($content->getBody());
 
@@ -157,7 +157,15 @@ class SearchService
             return [];
         }
 
-        return $this->store->searchAcross($collections, $queryVector, $limit);
+        $all = [];
+        foreach ($collections as $col) {
+            foreach ($this->store->matryoshkaSearch($col, $queryVector, $limit, $this->stages) as $r) {
+                $r['collection'] = $col;
+                $all[] = $r;
+            }
+        }
+        usort($all, fn($a, $b) => $b['score'] <=> $a['score']);
+        return array_slice($all, 0, $limit);
     }
 
     /**
@@ -184,7 +192,7 @@ class SearchService
             $passes = true;
 
             foreach ($filters as $key => $value) {
-                if (isset($meta[$key]) && $meta[$key] !== $value) {
+                if (!isset($meta[$key]) || $meta[$key] !== $value) {
                     $passes = false;
                     break;
                 }

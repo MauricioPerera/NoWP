@@ -1,6 +1,6 @@
 <?php
 
-use Framework\Content\Media;
+use ChimeraNoWP\Content\Media;
 
 describe('Media Model', function () {
     beforeEach(function () {

@@ -11,7 +11,7 @@
 
 declare(strict_types=1);
 
-namespace Framework\Cache;
+namespace ChimeraNoWP\Cache;
 
 class APCuAdapter implements CacheAdapterInterface
 {

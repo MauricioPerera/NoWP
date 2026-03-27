@@ -13,9 +13,9 @@
 
 declare(strict_types=1);
 
-namespace Framework\Agent\Page;
+namespace ChimeraNoWP\Agent\Page;
 
-use Framework\Agent\AgentService;
+use ChimeraNoWP\Agent\AgentFacade;
 
 class PageBuilder
 {
@@ -24,9 +24,9 @@ class PageBuilder
     /** @var array<string, array> */
     private array $pages = [];
 
-    private ?AgentService $agent;
+    private ?AgentFacade $agent;
 
-    public function __construct(string $storagePath, ?AgentService $agent = null)
+    public function __construct(string $storagePath, ?AgentFacade $agent = null)
     {
         $this->storagePath = rtrim($storagePath, '/');
         $this->agent       = $agent;

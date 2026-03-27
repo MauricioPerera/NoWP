@@ -10,9 +10,9 @@
 
 declare(strict_types=1);
 
-namespace Framework\Backup;
+namespace ChimeraNoWP\Backup;
 
-use Framework\Database\Connection;
+use ChimeraNoWP\Database\Connection;
 use ZipArchive;
 
 class BackupCommand
@@ -85,20 +85,26 @@ class BackupCommand
     {
         $sqlFile = $targetDir . '/database.sql';
         $tables = $this->getTables();
-        
+        $driver = $this->connection->getDriver();
+
         $sql = "-- Database Backup\n";
         $sql .= "-- Generated: " . date('Y-m-d H:i:s') . "\n\n";
-        $sql .= "SET FOREIGN_KEY_CHECKS=0;\n\n";
-        
+
+        if ($driver !== 'sqlite') {
+            $sql .= "SET FOREIGN_KEY_CHECKS=0;\n\n";
+        }
+
         foreach ($tables as $table) {
             $sql .= $this->exportTable($table);
         }
-        
-        $sql .= "SET FOREIGN_KEY_CHECKS=1;\n";
-        
+
+        if ($driver !== 'sqlite') {
+            $sql .= "SET FOREIGN_KEY_CHECKS=1;\n";
+        }
+
         file_put_contents($sqlFile, $sql);
     }
-    
+
     /**
      * Get list of tables
      *
@@ -106,16 +112,25 @@ class BackupCommand
      */
     private function getTables(): array
     {
+        $driver = $this->connection->getDriver();
+
+        if ($driver === 'sqlite') {
+            $result = $this->connection->fetchAll(
+                "SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%'"
+            );
+            return array_column($result, 'name');
+        }
+
         $result = $this->connection->fetchAll("SHOW TABLES");
         $tables = [];
-        
+
         foreach ($result as $row) {
             $tables[] = array_values($row)[0];
         }
-        
+
         return $tables;
     }
-    
+
     /**
      * Export table structure and data
      *
@@ -124,34 +139,45 @@ class BackupCommand
      */
     private function exportTable(string $table): string
     {
+        $driver = $this->connection->getDriver();
         $sql = "-- Table: {$table}\n";
-        
-        // Get CREATE TABLE statement
-        $createTable = $this->connection->fetchOne("SHOW CREATE TABLE `{$table}`");
-        $sql .= "DROP TABLE IF EXISTS `{$table}`;\n";
-        $sql .= $createTable['Create Table'] . ";\n\n";
-        
+
+        if ($driver === 'sqlite') {
+            // Get CREATE TABLE statement from sqlite_master
+            $createResult = $this->connection->fetchOne(
+                "SELECT sql FROM sqlite_master WHERE type='table' AND name=?",
+                [$table]
+            );
+            $sql .= "DROP TABLE IF EXISTS `{$table}`;\n";
+            $sql .= ($createResult['sql'] ?? '') . ";\n\n";
+        } else {
+            // Get CREATE TABLE statement (MySQL)
+            $createTable = $this->connection->fetchOne("SHOW CREATE TABLE `{$table}`");
+            $sql .= "DROP TABLE IF EXISTS `{$table}`;\n";
+            $sql .= $createTable['Create Table'] . ";\n\n";
+        }
+
         // Get table data
         $rows = $this->connection->fetchAll("SELECT * FROM `{$table}`");
-        
+
         if (!empty($rows)) {
             $columns = array_keys($rows[0]);
             $columnList = '`' . implode('`, `', $columns) . '`';
-            
+
             foreach ($rows as $row) {
                 $values = array_map(function ($value) {
                     if ($value === null) {
                         return 'NULL';
                     }
-                    return "'" . addslashes($value) . "'";
+                    return "'" . addslashes((string) $value) . "'";
                 }, array_values($row));
-                
+
                 $sql .= "INSERT INTO `{$table}` ({$columnList}) VALUES (" . implode(', ', $values) . ");\n";
             }
-            
+
             $sql .= "\n";
         }
-        
+
         return $sql;
     }
     

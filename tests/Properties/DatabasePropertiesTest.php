@@ -9,7 +9,7 @@
 
 declare(strict_types=1);
 
-use Framework\Database\Connection;
+use ChimeraNoWP\Database\Connection;
 use PDO;
 
 beforeEach(function () {

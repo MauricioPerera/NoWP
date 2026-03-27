@@ -1,15 +1,15 @@
 <?php
 
-use Framework\Content\ContentService;
-use Framework\Content\ContentRepository;
-use Framework\Content\CustomFieldRepository;
-use Framework\Content\Content;
-use Framework\Content\ContentType;
-use Framework\Content\ContentStatus;
-use Framework\Plugin\HookSystem;
-use Framework\Cache\CacheManager;
-use Framework\Cache\FileAdapter;
-use Framework\Database\Connection;
+use ChimeraNoWP\Content\ContentService;
+use ChimeraNoWP\Content\ContentRepository;
+use ChimeraNoWP\Content\CustomFieldRepository;
+use ChimeraNoWP\Content\Content;
+use ChimeraNoWP\Content\ContentType;
+use ChimeraNoWP\Content\ContentStatus;
+use ChimeraNoWP\Plugin\HookSystem;
+use ChimeraNoWP\Cache\CacheManager;
+use ChimeraNoWP\Cache\FileAdapter;
+use ChimeraNoWP\Database\Connection;
 
 beforeEach(function () {
     $this->connection = new Connection([
@@ -41,6 +41,8 @@ beforeEach(function () {
             status TEXT NOT NULL,
             author_id INTEGER NOT NULL,
             parent_id INTEGER,
+            locale VARCHAR(10) DEFAULT NULL,
+            translation_group VARCHAR(50) DEFAULT NULL,
             created_at TEXT,
             updated_at TEXT,
             published_at TEXT
@@ -68,6 +70,8 @@ beforeEach(function () {
             type TEXT NOT NULL,
             status TEXT NOT NULL,
             author_id INTEGER NOT NULL,
+            locale VARCHAR(10) DEFAULT NULL,
+            translation_group VARCHAR(50) DEFAULT NULL,
             created_at TEXT
         )
     ');

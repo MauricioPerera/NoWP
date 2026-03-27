@@ -12,15 +12,16 @@
 
 declare(strict_types=1);
 
-namespace Framework\Agent\Scaffolding;
+namespace ChimeraNoWP\Agent\Scaffolding;
 
-use Framework\Agent\AgentService;
-use Framework\Agent\Provider\AIProviderInterface;
+use ChimeraNoWP\Agent\AgentFacade;
+use ChimeraNoWP\Agent\LLM\Message;
+use ChimeraNoWP\Agent\LLM\ProviderInterface;
 
 class ScaffoldingEngine
 {
-    private AgentService $agent;
-    private ?AIProviderInterface $provider = null;
+    private AgentFacade $agent;
+    private ?ProviderInterface $provider = null;
     private string $state = 'idle';
     private array $context = [];
     private array $plan = [];
@@ -86,7 +87,7 @@ Current plan:
 {{plan}}
 PROMPT;
 
-    public function __construct(AgentService $agent, string $storagePath = '', ?AIProviderInterface $provider = null)
+    public function __construct(AgentFacade $agent, string $storagePath = '', ?ProviderInterface $provider = null)
     {
         $this->agent = $agent;
         $this->provider = $provider;
@@ -359,16 +360,17 @@ PROMPT;
     private function chatNoTools(string $systemPrompt, string $userMessage): string
     {
         if ($this->provider) {
-            $response = $this->provider->chat(
-                [['role' => 'user', 'content' => $userMessage]],
-                $systemPrompt,
-                [], // no tools
+            $msgObjects = array_map(
+                fn($m) => new Message($m['role'], $m['content']),
+                [['role' => 'user', 'content' => $userMessage]]
             );
-            return $response['content'] ?? '';
+            array_unshift($msgObjects, new Message('system', $systemPrompt));
+            $response = $this->provider->chat($msgObjects, []);
+            return $response->content ?? '';
         }
 
         // Fallback to agent (may use tools)
-        $this->agent->reset();
+        $this->agent->clear();
         return $this->agent->chat($userMessage);
     }
 

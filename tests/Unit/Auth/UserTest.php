@@ -1,7 +1,7 @@
 <?php
 
-use Framework\Auth\User;
-use Framework\Auth\UserRole;
+use ChimeraNoWP\Auth\User;
+use ChimeraNoWP\Auth\UserRole;
 
 describe('User', function () {
     it('creates a user with required properties', function () {

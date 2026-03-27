@@ -1,9 +1,9 @@
 <?php
 
-use Framework\Core\ExceptionHandler;
-use Framework\Core\Exceptions\ValidationException;
-use Framework\Core\Exceptions\NotFoundException;
-use Framework\Core\Exceptions\ServerException;
+use ChimeraNoWP\Core\ExceptionHandler;
+use ChimeraNoWP\Core\Exceptions\ValidationException;
+use ChimeraNoWP\Core\Exceptions\NotFoundException;
+use ChimeraNoWP\Core\Exceptions\ServerException;
 
 beforeEach(function () {
     $this->logPath = BASE_PATH . '/storage/logs/test-errors.log';

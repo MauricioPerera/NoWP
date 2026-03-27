@@ -1,6 +1,8 @@
 <?php
 
-namespace Framework\Core;
+declare(strict_types=1);
+
+namespace ChimeraNoWP\Core;
 
 /**
  * Application Class
@@ -151,8 +153,8 @@ class Application
         // Register Database Connection
         $dbConfig = $this->config('database', []);
         if (!empty($dbConfig)) {
-            $this->container->singleton(\Framework\Database\Connection::class, function () use ($dbConfig) {
-                return new \Framework\Database\Connection($dbConfig);
+            $this->container->singleton(\ChimeraNoWP\Database\Connection::class, function () use ($dbConfig) {
+                return new \ChimeraNoWP\Database\Connection($dbConfig);
             });
         }
 
@@ -160,11 +162,11 @@ class Application
         $searchConfig = $this->config('search', []);
         if ($searchConfig['enabled'] ?? true) {
             if (class_exists(\PHPVectorStore\VectorStore::class)) {
-                $hooks = $this->container->has(\Framework\Plugin\HookSystem::class)
-                    ? $this->container->get(\Framework\Plugin\HookSystem::class)
-                    : new \Framework\Plugin\HookSystem();
+                $hooks = $this->container->has(\ChimeraNoWP\Plugin\HookSystem::class)
+                    ? $this->container->get(\ChimeraNoWP\Plugin\HookSystem::class)
+                    : new \ChimeraNoWP\Plugin\HookSystem();
 
-                \Framework\Search\SearchServiceProvider::register(
+                \ChimeraNoWP\Search\SearchServiceProvider::register(
                     $this->container,
                     $hooks,
                     $searchConfig
@@ -172,18 +174,175 @@ class Application
 
                 // Register search routes
                 $router = $this->container->resolve(Router::class);
-                \Framework\Search\SearchServiceProvider::registerRoutes($router, $this->container);
+                \ChimeraNoWP\Search\SearchServiceProvider::registerRoutes($router, $this->container);
             }
+        }
+
+        // Register Content services (needed by CMSBridge in AgentServiceProvider)
+        if ($this->container->has(\ChimeraNoWP\Database\Connection::class)) {
+            $this->container->singleton(\ChimeraNoWP\Plugin\HookSystem::class, fn() => new \ChimeraNoWP\Plugin\HookSystem());
+            $this->container->singleton(\ChimeraNoWP\Cache\CacheManager::class, fn() => new \ChimeraNoWP\Cache\CacheManager());
+            $this->container->singleton(\ChimeraNoWP\Content\CustomFieldRepository::class, fn($c) => new \ChimeraNoWP\Content\CustomFieldRepository(
+                $c->resolve(\ChimeraNoWP\Database\Connection::class)
+            ));
+            $this->container->singleton(\ChimeraNoWP\Content\ContentRepository::class, fn($c) => new \ChimeraNoWP\Content\ContentRepository(
+                $c->resolve(\ChimeraNoWP\Database\Connection::class),
+                $c->resolve(\ChimeraNoWP\Content\CustomFieldRepository::class),
+            ));
+            $this->container->singleton(\ChimeraNoWP\Content\ContentService::class, fn($c) => new \ChimeraNoWP\Content\ContentService(
+                $c->resolve(\ChimeraNoWP\Content\ContentRepository::class),
+                $c->resolve(\ChimeraNoWP\Plugin\HookSystem::class),
+                $c->resolve(\ChimeraNoWP\Cache\CacheManager::class),
+                $c->resolve(\ChimeraNoWP\Database\Connection::class),
+                $c->resolve(\ChimeraNoWP\Content\CustomFieldRepository::class),
+            ));
+        }
+
+        // Register PluginManager and auto-load all plugins from plugins/
+        $pluginsPath = (defined('BASE_PATH') ? BASE_PATH : getcwd()) . '/plugins';
+        $router = $this->container->resolve(Router::class);
+        $hooks  = $this->container->has(\ChimeraNoWP\Plugin\HookSystem::class)
+            ? $this->container->get(\ChimeraNoWP\Plugin\HookSystem::class)
+            : new \ChimeraNoWP\Plugin\HookSystem();
+        $pm = new \ChimeraNoWP\Plugin\PluginManager($this->container, $hooks, $pluginsPath, $router);
+        $this->container->instance(\ChimeraNoWP\Plugin\PluginManager::class, $pm);
+        $pm->loadPlugins();
+        foreach (array_keys($pm->getPlugins()) as $pName) {
+            $pm->activatePlugin($pName);
         }
 
         // Register Agent Service (chat + tools + workflows + memory)
         $agentConfig = $this->config('agent', []);
         if ($agentConfig['enabled'] ?? true) {
-            \Framework\Agent\AgentServiceProvider::register($this->container, $agentConfig);
+            \ChimeraNoWP\Agent\AgentServiceProvider::register($this->container, $agentConfig);
 
             $router = $this->container->resolve(Router::class);
-            \Framework\Agent\AgentServiceProvider::registerRoutes($router, $this->container);
+            \ChimeraNoWP\Agent\AgentServiceProvider::registerRoutes($router, $this->container);
         }
+
+        // Register Auth & User routes
+        $this->registerAuthRoutes();
+    }
+
+    /**
+     * Register authentication and user management routes
+     */
+    private function registerAuthRoutes(): void
+    {
+        $router = $this->container->resolve(Router::class);
+        $container = $this->container;
+
+        // Ensure dependencies are registered
+        if (!$container->has(\ChimeraNoWP\Auth\PasswordHasher::class)) {
+            $container->singleton(\ChimeraNoWP\Auth\PasswordHasher::class, fn() => new \ChimeraNoWP\Auth\PasswordHasher());
+        }
+
+        $jwtSecret = $this->config('app.jwt_secret', env('JWT_SECRET', ''));
+        $jwtTtl = (int) $this->config('app.jwt_ttl', env('JWT_EXPIRATION', 3600));
+
+        if (!$container->has(\ChimeraNoWP\Auth\JWTManager::class)) {
+            $container->singleton(\ChimeraNoWP\Auth\JWTManager::class, fn() => new \ChimeraNoWP\Auth\JWTManager($jwtSecret, $jwtTtl));
+        }
+
+        if (!$container->has(\ChimeraNoWP\Auth\UserRepository::class)) {
+            $container->singleton(\ChimeraNoWP\Auth\UserRepository::class, fn($c) => new \ChimeraNoWP\Auth\UserRepository(
+                $c->resolve(\ChimeraNoWP\Database\Connection::class)
+            ));
+        }
+
+        if (!$container->has(\ChimeraNoWP\Auth\UserService::class)) {
+            $container->singleton(\ChimeraNoWP\Auth\UserService::class, fn($c) => new \ChimeraNoWP\Auth\UserService(
+                $c->resolve(\ChimeraNoWP\Auth\UserRepository::class),
+                $c->resolve(\ChimeraNoWP\Auth\PasswordHasher::class),
+                $c->resolve(\ChimeraNoWP\Auth\JWTManager::class)
+            ));
+        }
+
+        $jwtManager = $container->resolve(\ChimeraNoWP\Auth\JWTManager::class);
+        $authMiddleware = new \ChimeraNoWP\Auth\AuthMiddleware($jwtManager);
+
+        // Public auth routes
+        $router->post('/api/auth/login', function (\ChimeraNoWP\Core\Request $req) use ($container) {
+            $ctrl = new \ChimeraNoWP\Auth\AuthController(
+                $container->resolve(\ChimeraNoWP\Auth\UserService::class),
+                $container->resolve(\ChimeraNoWP\Auth\JWTManager::class)
+            );
+            return $ctrl->login($req);
+        });
+
+        $router->post('/api/auth/register', function (\ChimeraNoWP\Core\Request $req) use ($container) {
+            $ctrl = new \ChimeraNoWP\Auth\AuthController(
+                $container->resolve(\ChimeraNoWP\Auth\UserService::class),
+                $container->resolve(\ChimeraNoWP\Auth\JWTManager::class)
+            );
+            return $ctrl->register($req);
+        });
+
+        // Protected auth routes
+        $router->get('/api/auth/me', function (\ChimeraNoWP\Core\Request $req) use ($container) {
+            $ctrl = new \ChimeraNoWP\Auth\AuthController(
+                $container->resolve(\ChimeraNoWP\Auth\UserService::class),
+                $container->resolve(\ChimeraNoWP\Auth\JWTManager::class)
+            );
+            return $ctrl->me($req);
+        })->middleware($authMiddleware);
+
+        $router->post('/api/auth/refresh', function (\ChimeraNoWP\Core\Request $req) use ($container) {
+            $ctrl = new \ChimeraNoWP\Auth\AuthController(
+                $container->resolve(\ChimeraNoWP\Auth\UserService::class),
+                $container->resolve(\ChimeraNoWP\Auth\JWTManager::class)
+            );
+            return $ctrl->refresh($req);
+        })->middleware($authMiddleware);
+
+        $router->post('/api/auth/change-password', function (\ChimeraNoWP\Core\Request $req) use ($container) {
+            $ctrl = new \ChimeraNoWP\Auth\AuthController(
+                $container->resolve(\ChimeraNoWP\Auth\UserService::class),
+                $container->resolve(\ChimeraNoWP\Auth\JWTManager::class)
+            );
+            return $ctrl->changePassword($req);
+        })->middleware($authMiddleware);
+
+        // User management routes (admin)
+        $userReadPerm = new \ChimeraNoWP\Auth\PermissionMiddleware('user.read');
+        $userCreatePerm = new \ChimeraNoWP\Auth\PermissionMiddleware('user.create');
+        $userUpdatePerm = new \ChimeraNoWP\Auth\PermissionMiddleware('user.update');
+        $userDeletePerm = new \ChimeraNoWP\Auth\PermissionMiddleware('user.delete');
+
+        $router->get('/api/users', function (\ChimeraNoWP\Core\Request $req) use ($container) {
+            $ctrl = new \ChimeraNoWP\Auth\UserController(
+                $container->resolve(\ChimeraNoWP\Auth\UserService::class)
+            );
+            return $ctrl->index($req);
+        })->middleware($authMiddleware)->middleware($userReadPerm);
+
+        $router->get('/api/users/{id}', function (\ChimeraNoWP\Core\Request $req, string $id) use ($container) {
+            $ctrl = new \ChimeraNoWP\Auth\UserController(
+                $container->resolve(\ChimeraNoWP\Auth\UserService::class)
+            );
+            return $ctrl->show($req, (int) $id);
+        })->middleware($authMiddleware)->middleware($userReadPerm);
+
+        $router->post('/api/users', function (\ChimeraNoWP\Core\Request $req) use ($container) {
+            $ctrl = new \ChimeraNoWP\Auth\UserController(
+                $container->resolve(\ChimeraNoWP\Auth\UserService::class)
+            );
+            return $ctrl->store($req);
+        })->middleware($authMiddleware)->middleware($userCreatePerm);
+
+        $router->put('/api/users/{id}', function (\ChimeraNoWP\Core\Request $req, string $id) use ($container) {
+            $ctrl = new \ChimeraNoWP\Auth\UserController(
+                $container->resolve(\ChimeraNoWP\Auth\UserService::class)
+            );
+            return $ctrl->update($req, (int) $id);
+        })->middleware($authMiddleware)->middleware($userUpdatePerm);
+
+        $router->delete('/api/users/{id}', function (\ChimeraNoWP\Core\Request $req, string $id) use ($container) {
+            $ctrl = new \ChimeraNoWP\Auth\UserController(
+                $container->resolve(\ChimeraNoWP\Auth\UserService::class)
+            );
+            return $ctrl->destroy($req, (int) $id);
+        })->middleware($authMiddleware)->middleware($userDeletePerm);
     }
 
     /**

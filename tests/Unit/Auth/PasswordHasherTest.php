@@ -1,6 +1,6 @@
 <?php
 
-use Framework\Auth\PasswordHasher;
+use ChimeraNoWP\Auth\PasswordHasher;
 
 describe('PasswordHasher', function () {
     beforeEach(function () {

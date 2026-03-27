@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace Framework\Agent\Workflow;
+namespace ChimeraNoWP\Agent\Workflow;
 
-use Framework\Agent\Tools\Tool;
+use ChimeraNoWP\Agent\Core\ToolDefinition;
 
 /**
  * Workflow Engine — executes multi-step workflows with A2E operations.
@@ -14,16 +14,16 @@ use Framework\Agent\Tools\Tool;
  */
 class WorkflowEngine
 {
-    /** @var array<string, Tool> */
+    /** @var array<string, ToolDefinition> */
     private array $tools = [];
 
-    public function registerTool(Tool $tool): void
+    public function registerTool(ToolDefinition $tool): void
     {
-        $this->tools[$tool->getName()] = $tool;
+        $this->tools[$tool->name] = $tool;
     }
 
     /**
-     * @param Tool[] $tools
+     * @param ToolDefinition[] $tools
      */
     public function registerTools(array $tools): void
     {

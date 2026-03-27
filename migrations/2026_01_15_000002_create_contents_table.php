@@ -13,7 +13,7 @@ declare(strict_types=1);
 
 require_once __DIR__ . '/../src/Database/Migration.php';
 
-use Framework\Database\Migration;
+use ChimeraNoWP\Database\Migration;
 
 class CreateContentsTable extends Migration
 {

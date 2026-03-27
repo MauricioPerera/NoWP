@@ -1,6 +1,6 @@
 <?php
 
-use Framework\Auth\JWTManager;
+use ChimeraNoWP\Auth\JWTManager;
 
 describe('JWTManager', function () {
     beforeEach(function () {

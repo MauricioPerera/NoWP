@@ -15,7 +15,7 @@ define('BASE_PATH', dirname(__DIR__));
 
 // Manual autoload
 spl_autoload_register(function ($class) {
-    $prefix = 'Framework\\';
+    $prefix = 'ChimeraNoWP\\';
     $baseDir = BASE_PATH . '/src/';
     $len = strlen($prefix);
     if (strncmp($prefix, $class, $len) !== 0) return;
@@ -29,8 +29,8 @@ if (file_exists($autoload)) {
     require $autoload;
 }
 
-use Framework\Agent\Workflow\WorkflowEngine;
-use Framework\Agent\Workflow\Scheduler;
+use ChimeraNoWP\Agent\Workflow\WorkflowEngine;
+use ChimeraNoWP\Agent\Workflow\Scheduler;
 
 // Load config
 $config = [];

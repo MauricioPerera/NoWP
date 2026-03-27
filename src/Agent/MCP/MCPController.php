@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace Framework\Agent\MCP;
+namespace ChimeraNoWP\Agent\MCP;
 
-use Framework\Core\Request;
-use Framework\Core\Response;
+use ChimeraNoWP\Core\Request;
+use ChimeraNoWP\Core\Response;
 
 /**
  * MCP HTTP Controller.

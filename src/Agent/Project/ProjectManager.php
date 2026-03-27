@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Framework\Agent\Project;
+namespace ChimeraNoWP\Agent\Project;
 
 /**
  * Project Manager — handles multi-project support.

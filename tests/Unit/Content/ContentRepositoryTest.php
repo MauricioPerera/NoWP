@@ -1,11 +1,11 @@
 <?php
 
-use Framework\Content\ContentRepository;
-use Framework\Content\Content;
-use Framework\Content\ContentType;
-use Framework\Content\ContentStatus;
-use Framework\Database\Connection;
-use Framework\Database\QueryBuilder;
+use ChimeraNoWP\Content\ContentRepository;
+use ChimeraNoWP\Content\Content;
+use ChimeraNoWP\Content\ContentType;
+use ChimeraNoWP\Content\ContentStatus;
+use ChimeraNoWP\Database\Connection;
+use ChimeraNoWP\Database\QueryBuilder;
 
 beforeEach(function () {
     // Use SQLite in-memory database for tests
@@ -44,6 +44,8 @@ beforeEach(function () {
             status TEXT NOT NULL,
             author_id INTEGER NOT NULL,
             parent_id INTEGER,
+            locale VARCHAR(10) DEFAULT NULL,
+            translation_group VARCHAR(50) DEFAULT NULL,
             created_at TEXT DEFAULT CURRENT_TIMESTAMP,
             updated_at TEXT DEFAULT CURRENT_TIMESTAMP,
             published_at TEXT

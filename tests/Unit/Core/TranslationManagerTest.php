@@ -1,6 +1,6 @@
 <?php
 
-use Framework\Core\TranslationManager;
+use ChimeraNoWP\Core\TranslationManager;
 
 beforeEach(function () {
     $this->translationsPath = __DIR__ . '/../../fixtures/translations';

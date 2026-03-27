@@ -1,7 +1,7 @@
 <?php
 
-use Framework\Backup\BackupCommand;
-use Framework\Database\Connection;
+use ChimeraNoWP\Backup\BackupCommand;
+use ChimeraNoWP\Database\Connection;
 
 beforeEach(function () {
     $this->connection = new Connection([
@@ -132,8 +132,16 @@ test('cleans up temporary directory after backup', function () {
 test('cleans up on backup failure', function () {
     // Create a command with invalid connection to force failure
     $badConnection = new Connection([
-        'driver' => 'sqlite',
-        'database' => '/invalid/path/database.db',
+        'default' => 'sqlite',
+        'connections' => [
+            'sqlite' => [
+                'driver' => 'sqlite',
+                'database' => '/invalid/path/database.db',
+                'options' => [
+                    \PDO::ATTR_ERRMODE => \PDO::ERRMODE_EXCEPTION,
+                ],
+            ],
+        ],
     ]);
     
     $command = new BackupCommand($badConnection, $this->backupPath);

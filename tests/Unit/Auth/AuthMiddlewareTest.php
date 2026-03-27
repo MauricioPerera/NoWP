@@ -1,9 +1,9 @@
 <?php
 
-use Framework\Auth\AuthMiddleware;
-use Framework\Auth\JWTManager;
-use Framework\Core\Request;
-use Framework\Core\Response;
+use ChimeraNoWP\Auth\AuthMiddleware;
+use ChimeraNoWP\Auth\JWTManager;
+use ChimeraNoWP\Core\Request;
+use ChimeraNoWP\Core\Response;
 
 describe('AuthMiddleware', function () {
     beforeEach(function () {
@@ -85,9 +85,9 @@ describe('AuthMiddleware', function () {
             // Verify user data was injected
             $user = $request->getAttribute('user');
             expect($user)->not->toBeNull();
-            expect($user['id'])->toBe(123);
-            expect($user['email'])->toBe('user@example.com');
-            expect($user['role'])->toBe('editor');
+            expect($user->id)->toBe(123);
+            expect($user->email)->toBe('user@example.com');
+            expect($user->role->value)->toBe('editor');
             
             return Response::success(['data' => 'protected']);
         };
@@ -109,7 +109,7 @@ describe('AuthMiddleware', function () {
         
         $next = function ($request) {
             $user = $request->getAttribute('user');
-            expect($user['id'])->toBe(456);
+            expect($user->id)->toBe(456);
             return Response::success();
         };
 
@@ -131,9 +131,9 @@ describe('AuthMiddleware', function () {
             // Test convenience method
             $user = $request->user();
             expect($user)->not->toBeNull();
-            expect($user['id'])->toBe(789);
-            expect($user['email'])->toBe('test@example.com');
-            expect($user['role'])->toBe('author');
+            expect($user->id)->toBe(789);
+            expect($user->email)->toBe('test@example.com');
+            expect($user->role->value)->toBe('author');
             
             return Response::success();
         };

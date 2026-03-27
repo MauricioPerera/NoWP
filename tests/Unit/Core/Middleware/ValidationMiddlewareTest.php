@@ -1,9 +1,9 @@
 <?php
 
-use Framework\Core\Middleware\ValidationMiddleware;
-use Framework\Core\Request;
-use Framework\Core\Response;
-use Framework\Core\Exceptions\ValidationException;
+use ChimeraNoWP\Core\Middleware\ValidationMiddleware;
+use ChimeraNoWP\Core\Request;
+use ChimeraNoWP\Core\Response;
+use ChimeraNoWP\Core\Exceptions\ValidationException;
 
 it('validates and sanitizes data', function () {
     $middleware = new ValidationMiddleware([

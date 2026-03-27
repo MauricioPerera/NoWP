@@ -8,12 +8,12 @@
 
 declare(strict_types=1);
 
-use Framework\Content\MediaController;
-use Framework\Core\Request;
-use Framework\Core\Response;
-use Framework\Storage\FileManager;
-use Framework\Storage\ImageProcessor;
-use Framework\Database\Connection;
+use ChimeraNoWP\Content\MediaController;
+use ChimeraNoWP\Core\Request;
+use ChimeraNoWP\Core\Response;
+use ChimeraNoWP\Storage\FileManager;
+use ChimeraNoWP\Storage\ImageProcessor;
+use ChimeraNoWP\Database\Connection;
 use PDO;
 
 beforeEach(function () {
@@ -206,7 +206,7 @@ it('deletes a media file', function () {
     expect(file_exists($testFile))->toBeFalse();
     
     // Verify database record was deleted
-    $queryBuilder = new Framework\Database\QueryBuilder($this->connection);
+    $queryBuilder = new ChimeraNoWP\Database\QueryBuilder($this->connection);
     $record = $queryBuilder->table('media')
         ->select(['*'])
         ->where('id', $mediaId)

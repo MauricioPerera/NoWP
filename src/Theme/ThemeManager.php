@@ -10,7 +10,7 @@
 
 declare(strict_types=1);
 
-namespace Framework\Theme;
+namespace ChimeraNoWP\Theme;
 
 class ThemeManager
 {
@@ -70,8 +70,15 @@ class ThemeManager
             throw new \RuntimeException("Template '{$template}' not found");
         }
         
-        // Extract data to variables
-        extract($data, EXTR_SKIP);
+        // Make data available to template via explicit variable assignment
+        // Avoids extract() which can cause variable pollution
+        $__data = $data;
+        foreach ($__data as $__key => $__value) {
+            if (!in_array($__key, ['this', '__data', '__key', '__value', 'templatePath', 'template'], true)) {
+                $$__key = $__value;
+            }
+        }
+        unset($__data, $__key, $__value);
         
         // Start output buffering
         ob_start();
@@ -93,6 +100,9 @@ class ThemeManager
      */
     private function findTemplate(string $template): ?string
     {
+        // Sanitize template name to prevent path traversal
+        $template = str_replace(['../', '..\\', "\0"], '', $template);
+
         // Ensure .php extension
         if (!str_ends_with($template, '.php')) {
             $template .= '.php';

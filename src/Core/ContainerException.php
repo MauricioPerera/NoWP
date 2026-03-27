@@ -1,6 +1,6 @@
 <?php
 
-namespace Framework\Core;
+namespace ChimeraNoWP\Core;
 
 use Exception;
 

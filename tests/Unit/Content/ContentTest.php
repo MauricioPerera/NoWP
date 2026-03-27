@@ -1,8 +1,8 @@
 <?php
 
-use Framework\Content\Content;
-use Framework\Content\ContentType;
-use Framework\Content\ContentStatus;
+use ChimeraNoWP\Content\Content;
+use ChimeraNoWP\Content\ContentType;
+use ChimeraNoWP\Content\ContentStatus;
 
 test('Content model can be instantiated with required properties', function () {
     $now = new DateTime();

@@ -1,6 +1,6 @@
 {
-    "name": "wordpress-alternative/framework",
-    "description": "Modern BaaS framework as WordPress alternative for 2026",
+    "name": "mauricioperera/chimera-nowp",
+    "description": "Agentic CMS - Chimera AI engine + NoWP CMS framework fused into one",
     "type": "project",
     "license": "MIT",
     "require": {
@@ -12,13 +12,18 @@
         "intervention/image": "^3.0",
         "mauricioperera/php-vector-store": "^0.1"
     },
+    "suggest": {
+        "mauricioperera/php-agent-memory": "Enhanced persistent memory with vector deduplication",
+        "mauricioperera/php-agent-shell": "CLI command discovery tools for agent",
+        "mauricioperera/php-a2e": "A2E workflow automation engine"
+    },
     "require-dev": {
         "pestphp/pest": "^2.0",
         "fakerphp/faker": "^1.23"
     },
     "autoload": {
         "psr-4": {
-            "Framework\\": "src/"
+            "ChimeraNoWP\\": "src/"
         },
         "files": [
             "src/helpers.php"

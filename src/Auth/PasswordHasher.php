@@ -1,6 +1,6 @@
 <?php
 
-namespace Framework\Auth;
+namespace ChimeraNoWP\Auth;
 
 /**
  * PasswordHasher - Handles password hashing and verification using bcrypt

@@ -13,10 +13,10 @@
 
 declare(strict_types=1);
 
-namespace Framework\Agent\Data;
+namespace ChimeraNoWP\Agent\Data;
 
-use Framework\Database\Connection;
-use Framework\Search\SearchService;
+use ChimeraNoWP\Database\Connection;
+use ChimeraNoWP\Search\SearchService;
 
 class EntityMaterializer
 {

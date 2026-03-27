@@ -1,10 +1,10 @@
 <?php
 
-use Framework\Core\Application;
-use Framework\Core\Container;
-use Framework\Core\Request;
-use Framework\Core\Response;
-use Framework\Core\Router;
+use ChimeraNoWP\Core\Application;
+use ChimeraNoWP\Core\Container;
+use ChimeraNoWP\Core\Request;
+use ChimeraNoWP\Core\Response;
+use ChimeraNoWP\Core\Router;
 
 describe('Application', function () {
     it('creates application with config', function () {
@@ -112,7 +112,7 @@ describe('Application', function () {
         
         expect($response->getStatusCode())->toBe(500)
             ->and($response->getContent())->toContain('Test error')
-            ->and($response->getContent())->toContain('debug');
+            ->and($response->getContent())->toContain('trace');
     });
 
     it('hides error details when debug is off', function () {

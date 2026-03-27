@@ -1,8 +1,8 @@
 <?php
 
-use Framework\Core\Middleware\SecurityHeadersMiddleware;
-use Framework\Core\Request;
-use Framework\Core\Response;
+use ChimeraNoWP\Core\Middleware\SecurityHeadersMiddleware;
+use ChimeraNoWP\Core\Request;
+use ChimeraNoWP\Core\Response;
 
 it('adds X-Frame-Options header', function () {
     $middleware = new SecurityHeadersMiddleware();

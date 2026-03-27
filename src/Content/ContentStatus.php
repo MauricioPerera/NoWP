@@ -1,6 +1,8 @@
 <?php
 
-namespace Framework\Content;
+declare(strict_types=1);
+
+namespace ChimeraNoWP\Content;
 
 enum ContentStatus: string
 {

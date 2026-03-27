@@ -1,9 +1,9 @@
 <?php
 
-use Framework\Core\Middleware\LocaleMiddleware;
-use Framework\Core\Request;
-use Framework\Core\Response;
-use Framework\Core\TranslationManager;
+use ChimeraNoWP\Core\Middleware\LocaleMiddleware;
+use ChimeraNoWP\Core\Request;
+use ChimeraNoWP\Core\Response;
+use ChimeraNoWP\Core\TranslationManager;
 
 beforeEach(function () {
     $this->translationsPath = __DIR__ . '/../../../fixtures/translations';

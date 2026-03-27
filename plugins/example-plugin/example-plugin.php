@@ -16,10 +16,10 @@ declare(strict_types=1);
 
 namespace Plugins\ExamplePlugin;
 
-use Framework\Plugin\PluginInterface;
-use Framework\Core\Container;
-use Framework\Plugin\HookSystem;
-use Framework\Plugin\PluginManager;
+use ChimeraNoWP\Plugin\PluginInterface;
+use ChimeraNoWP\Core\Container;
+use ChimeraNoWP\Plugin\HookSystem;
+use ChimeraNoWP\Plugin\PluginManager;
 
 class ExamplePlugin implements PluginInterface
 {

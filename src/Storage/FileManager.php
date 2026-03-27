@@ -11,7 +11,7 @@
 
 declare(strict_types=1);
 
-namespace Framework\Storage;
+namespace ChimeraNoWP\Storage;
 
 class FileManager
 {
@@ -56,6 +56,13 @@ class FileManager
         // Generate unique filename
         $originalName = $file['name'];
         $extension = pathinfo($originalName, PATHINFO_EXTENSION);
+
+        // Block dangerous file extensions
+        $blockedExtensions = ['php', 'phtml', 'phar', 'php5', 'php7', 'php8', 'phps', 'cgi', 'pl', 'py', 'sh', 'bat', 'exe', 'com', 'htaccess'];
+        if (in_array(strtolower($extension), $blockedExtensions)) {
+            throw new \RuntimeException("File type '$extension' is not allowed for security reasons.");
+        }
+
         $uniqueName = $this->generateUniqueFilename($originalName, $extension);
         
         // Get date-based directory path
@@ -108,30 +115,30 @@ class FileManager
      */
     public function delete(string $path): bool
     {
-        $fullPath = $this->uploadPath . '/' . ltrim($path, '/');
-        
+        $fullPath = $this->validatePath($path);
+
         if (!file_exists($fullPath)) {
             return false;
         }
-        
+
         return unlink($fullPath);
     }
-    
+
     /**
      * Check if a file exists
-     * 
+     *
      * @param string $path Relative path to file
      * @return bool
      */
     public function exists(string $path): bool
     {
-        $fullPath = $this->uploadPath . '/' . ltrim($path, '/');
+        $fullPath = $this->validatePath($path);
         return file_exists($fullPath);
     }
-    
+
     /**
      * Get public URL for a file
-     * 
+     *
      * @param string $path Relative path to file
      * @return string Public URL
      */
@@ -139,30 +146,56 @@ class FileManager
     {
         return $this->baseUrl . '/' . ltrim($path, '/');
     }
-    
+
     /**
      * Move a file to a new location
-     * 
+     *
      * @param string $from Source path
      * @param string $to Destination path
      * @return bool Success status
      */
     public function move(string $from, string $to): bool
     {
-        $fromPath = $this->uploadPath . '/' . ltrim($from, '/');
-        $toPath = $this->uploadPath . '/' . ltrim($to, '/');
-        
+        $fromPath = $this->validatePath($from);
+        $toPath = $this->validatePath($to);
+
         if (!file_exists($fromPath)) {
             return false;
         }
-        
+
         // Create destination directory if needed
         $toDir = dirname($toPath);
         if (!is_dir($toDir)) {
             mkdir($toDir, 0755, true);
         }
-        
+
         return rename($fromPath, $toPath);
+    }
+
+    /**
+     * Validate that a path stays within the upload directory
+     *
+     * @param string $path Relative path
+     * @return string Full validated path
+     * @throws \RuntimeException If path is outside upload directory
+     */
+    private function validatePath(string $path): string
+    {
+        // Block path traversal sequences
+        if (str_contains($path, '..') || str_contains($path, "\0")) {
+            throw new \RuntimeException("Access denied: path contains invalid sequences.");
+        }
+        $fullPath = $this->uploadPath . '/' . ltrim($path, '/');
+        // If the directory exists, verify it resolves inside uploadPath
+        $realUploadPath = realpath($this->uploadPath);
+        if ($realUploadPath !== false) {
+            $dirPath = dirname($fullPath);
+            $realDir = realpath($dirPath);
+            if ($realDir !== false && !str_starts_with($realDir, $realUploadPath)) {
+                throw new \RuntimeException("Access denied: path is outside upload directory.");
+            }
+        }
+        return $fullPath;
     }
     
     /**

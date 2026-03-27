@@ -11,9 +11,9 @@
 
 declare(strict_types=1);
 
-namespace Framework\Backup;
+namespace ChimeraNoWP\Backup;
 
-use Framework\Database\Connection;
+use ChimeraNoWP\Database\Connection;
 
 class MigrateCommand
 {

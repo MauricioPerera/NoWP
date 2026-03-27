@@ -15,7 +15,7 @@ require_once __DIR__ . '/../../../../src/Database/Connection.php';
 require_once __DIR__ . '/../../../../migrations/2026_01_15_000001_create_users_table.php';
 require_once __DIR__ . '/../../../../migrations/2026_01_15_000002_create_contents_table.php';
 
-use Framework\Database\Connection;
+use ChimeraNoWP\Database\Connection;
 
 beforeEach(function () {
     $config = [
@@ -71,6 +71,8 @@ it('creates contents table with correct schema', function () {
             status VARCHAR(50) NOT NULL,
             author_id INTEGER NOT NULL,
             parent_id INTEGER NULL,
+            locale VARCHAR(10) DEFAULT 'en',
+            translation_group VARCHAR(50) DEFAULT NULL,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             published_at TIMESTAMP NULL,
@@ -96,6 +98,8 @@ it('creates required indexes', function () {
             status VARCHAR(50) NOT NULL,
             author_id INTEGER NOT NULL,
             parent_id INTEGER NULL,
+            locale VARCHAR(10) DEFAULT 'en',
+            translation_group VARCHAR(50) DEFAULT NULL,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             published_at TIMESTAMP NULL,
@@ -128,6 +132,8 @@ it('enforces unique slug constraint', function () {
             status VARCHAR(50) NOT NULL,
             author_id INTEGER NOT NULL,
             parent_id INTEGER NULL,
+            locale VARCHAR(10) DEFAULT 'en',
+            translation_group VARCHAR(50) DEFAULT NULL,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             published_at TIMESTAMP NULL,
@@ -162,6 +168,8 @@ it('enforces foreign key constraint for author_id', function () {
             status VARCHAR(50) NOT NULL,
             author_id INTEGER NOT NULL,
             parent_id INTEGER NULL,
+            locale VARCHAR(10) DEFAULT 'en',
+            translation_group VARCHAR(50) DEFAULT NULL,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             published_at TIMESTAMP NULL,
@@ -188,6 +196,8 @@ it('allows null parent_id', function () {
             status VARCHAR(50) NOT NULL,
             author_id INTEGER NOT NULL,
             parent_id INTEGER NULL,
+            locale VARCHAR(10) DEFAULT 'en',
+            translation_group VARCHAR(50) DEFAULT NULL,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             published_at TIMESTAMP NULL,
@@ -220,6 +230,8 @@ it('allows null published_at', function () {
             status VARCHAR(50) NOT NULL,
             author_id INTEGER NOT NULL,
             parent_id INTEGER NULL,
+            locale VARCHAR(10) DEFAULT 'en',
+            translation_group VARCHAR(50) DEFAULT NULL,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             published_at TIMESTAMP NULL,
@@ -252,6 +264,8 @@ it('sets timestamps automatically', function () {
             status VARCHAR(50) NOT NULL,
             author_id INTEGER NOT NULL,
             parent_id INTEGER NULL,
+            locale VARCHAR(10) DEFAULT 'en',
+            translation_group VARCHAR(50) DEFAULT NULL,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             published_at TIMESTAMP NULL,
@@ -285,6 +299,8 @@ it('stores all content fields correctly', function () {
             status VARCHAR(50) NOT NULL,
             author_id INTEGER NOT NULL,
             parent_id INTEGER NULL,
+            locale VARCHAR(10) DEFAULT 'en',
+            translation_group VARCHAR(50) DEFAULT NULL,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             published_at TIMESTAMP NULL,
@@ -323,6 +339,8 @@ it('drops contents table on rollback', function () {
             status VARCHAR(50) NOT NULL,
             author_id INTEGER NOT NULL,
             parent_id INTEGER NULL,
+            locale VARCHAR(10) DEFAULT 'en',
+            translation_group VARCHAR(50) DEFAULT NULL,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             published_at TIMESTAMP NULL,

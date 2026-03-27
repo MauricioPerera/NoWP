@@ -2,29 +2,40 @@
 
 declare(strict_types=1);
 
-namespace Framework\Agent;
+namespace ChimeraNoWP\Agent;
 
-use Framework\Agent\Provider\OllamaProvider;
-use Framework\Agent\Provider\HttpProvider;
-use Framework\Agent\Tools\Tool;
-use Framework\Agent\Workflow\WorkflowEngine;
-use Framework\Agent\Memory\MemoryService;
-use Framework\Agent\MCP\MCPServer;
-use Framework\Agent\MCP\MCPController;
-use Framework\Agent\Data\EntitySchema;
-use Framework\Agent\Data\EntityMaterializer;
-use Framework\Agent\Testing\TestRunner;
-use Framework\Agent\Integration\ServiceDefinition;
-use Framework\Agent\Integration\IntegrationManager;
-use Framework\Agent\Workflow\Scheduler;
-use Framework\Agent\Page\PageBuilder;
-use Framework\Agent\Page\ComponentCatalog;
-use Framework\Core\Container;
-use Framework\Core\Router;
-use Framework\Search\SearchService;
-use Framework\Content\ContentRepository;
-use Framework\Content\ContentService;
-use Framework\Database\Connection;
+use ChimeraNoWP\Agent\Bridge\CMSBridge;
+use ChimeraNoWP\Agent\Bridge\MemoryBridge;
+use ChimeraNoWP\Agent\Bridge\WorkflowBridge;
+use ChimeraNoWP\Agent\Core\EventEmitter;
+use ChimeraNoWP\Agent\Core\ToolDefinition;
+use ChimeraNoWP\Agent\Core\ToolRegistry;
+use ChimeraNoWP\Agent\LLM\OllamaProvider;
+use ChimeraNoWP\Agent\LLM\OpenAIProvider;
+use ChimeraNoWP\Agent\LLM\OpenRouterProvider;
+use ChimeraNoWP\Agent\LLM\ProviderInterface;
+use ChimeraNoWP\Agent\LLM\WorkersAIProvider;
+use ChimeraNoWP\Agent\MCP\MCPController;
+use ChimeraNoWP\Agent\MCP\MCPServer;
+use ChimeraNoWP\Agent\Memory\MemoryService;
+use ChimeraNoWP\Agent\Memory\SessionStore;
+use ChimeraNoWP\Agent\Workflow\WorkflowEngine;
+use ChimeraNoWP\Agent\Workflow\Scheduler;
+use ChimeraNoWP\Agent\Data\EntitySchema;
+use ChimeraNoWP\Agent\Data\EntityMaterializer;
+use ChimeraNoWP\Agent\Testing\TestRunner;
+use ChimeraNoWP\Agent\Integration\ServiceDefinition;
+use ChimeraNoWP\Agent\Integration\IntegrationManager;
+use ChimeraNoWP\Agent\Page\PageBuilder;
+use ChimeraNoWP\Agent\Page\ComponentCatalog;
+use ChimeraNoWP\Agent\Project;
+use ChimeraNoWP\Agent\Scaffolding;
+use ChimeraNoWP\Core\Container;
+use ChimeraNoWP\Core\Router;
+use ChimeraNoWP\Search\SearchService;
+use ChimeraNoWP\Content\ContentRepository;
+use ChimeraNoWP\Content\ContentService;
+use ChimeraNoWP\Database\Connection;
 
 class AgentServiceProvider
 {
@@ -34,14 +45,14 @@ class AgentServiceProvider
             return;
         }
 
-        // Build AI provider
+        // Build LLM provider (supports 4 providers)
         $provider = self::createProvider($config);
 
         // Build workflow engine
         $workflow = new WorkflowEngine();
         $container->singleton(WorkflowEngine::class, fn() => $workflow);
 
-        // Build memory service (if search is available and memory is enabled)
+        // Build memory service (if search is available)
         $memory = null;
         if (($config['memory_enabled'] ?? true) && $container->has(SearchService::class)) {
             $memory = new MemoryService(
@@ -51,14 +62,60 @@ class AgentServiceProvider
             $container->singleton(MemoryService::class, fn() => $memory);
         }
 
-        // Build agent
-        $agent = new AgentService(
-            provider:     $provider,
-            workflow:     $workflow,
-            memory:       $memory,
+        // Build tool registry and event emitter
+        $tools = new ToolRegistry();
+        $events = new EventEmitter();
+
+        // Build session store (SQLite for conversation history)
+        $sessionStore = null;
+        try {
+            $sessionPath = ($config['data_dir'] ?? 'storage/agent') . '/sessions.db';
+            $sessionStore = new SessionStore($sessionPath);
+        } catch (\Throwable) {
+            // SQLite not available, sessions disabled
+        }
+
+        // Build agent facade
+        $agentId = $config['id'] ?? 'chimera';
+        $facade = new AgentFacade(
+            provider: $provider,
+            memory: $memory,
+            workflowEngine: $workflow,
+            tools: $tools,
+            events: $events,
+            sessions: $sessionStore,
             systemPrompt: $config['system_prompt'] ?? '',
-            agentId:      $config['id'] ?? 'default',
+            agentId: $agentId,
+            userId: 'default',
+            maxIterations: (int) ($config['max_iterations'] ?? 25),
         );
+
+        // Register CMS bridge tools
+        if ($container->has(ContentService::class) && $container->has(ContentRepository::class) && $container->has(SearchService::class)) {
+            $cmsTools = CMSBridge::tools(
+                $container->get(ContentService::class),
+                $container->get(ContentRepository::class),
+                $container->get(SearchService::class),
+            );
+            foreach ($cmsTools as $tool) {
+                $tools->register($tool);
+            }
+        }
+
+        // Register memory bridge tools
+        if ($memory) {
+            foreach (MemoryBridge::tools($memory, $agentId) as $tool) {
+                $tools->register($tool);
+            }
+        }
+
+        // Register workflow bridge tools
+        foreach (WorkflowBridge::tools($workflow) as $tool) {
+            $tools->register($tool);
+        }
+
+        // Register optional Chimera bridges (Shell, A2E)
+        self::loadOptionalBridges($tools);
 
         // Build A2D materializer
         if ($container->has(Connection::class)) {
@@ -72,17 +129,17 @@ class AgentServiceProvider
         // Build A2I integration manager
         $integrationPath = $config['integration_path'] ?? 'storage/agent/integrations';
         $integrations = new IntegrationManager($integrationPath);
-        $integrations->bootTools($agent); // re-register tools from stored services
+        $integrations->bootTools($facade);
         $container->singleton(IntegrationManager::class, fn() => $integrations);
 
-        // Build Scheduler (pseudo-cron for autonomous workflows)
+        // Build Scheduler
         $schedulerPath = $config['scheduler_path'] ?? 'storage/agent/schedules';
         $scheduler = new Scheduler($workflow, $schedulerPath);
         $container->singleton(Scheduler::class, fn() => $scheduler);
 
         // Build A2P page builder
         $pagePath = $config['pages_path'] ?? 'storage/agent/pages';
-        $pageBuilder = new PageBuilder($pagePath, $agent);
+        $pageBuilder = new PageBuilder($pagePath, $facade);
         $container->singleton(PageBuilder::class, fn() => $pageBuilder);
 
         // Build Project Manager
@@ -90,29 +147,35 @@ class AgentServiceProvider
         $projectManager = new Project\ProjectManager($projectsPath);
         $container->singleton(Project\ProjectManager::class, fn() => $projectManager);
 
-        // Build Scaffolding Engine (conversational system builder)
+        // Build Scaffolding Engine
         $scaffoldPath = $config['scaffolding_path'] ?? 'storage/agent/scaffolding';
-        $scaffolding = new Scaffolding\ScaffoldingEngine($agent, $scaffoldPath, $provider);
+        $scaffolding = new Scaffolding\ScaffoldingEngine($facade, $scaffoldPath, $provider);
         $container->singleton(Scaffolding\ScaffoldingEngine::class, fn() => $scaffolding);
 
-        // Register built-in tools (AFTER all A2 components are in the container)
-        self::registerBuiltinTools($agent, $container, $config);
+        // Register extended tools (A2D, A2I, scheduler, A2P, etc.)
+        self::registerExtendedTools($tools, $container, $config, $facade);
 
-        $container->singleton(AgentService::class, fn() => $agent);
+        // Register facade in container
+        $container->singleton(AgentFacade::class, fn() => $facade);
+
+        // Backwards compatibility alias
+        $container->singleton('agent', fn() => $facade);
     }
 
     public static function registerRoutes(Router $router, Container $container): void
     {
-        $make = fn() => new AgentController($container->get(AgentService::class));
+        $make = fn() => new AgentController($container->get(AgentFacade::class));
 
+        // Core agent endpoints
         $router->get('/api/agent/tools', fn() => $make()->listTools());
         $router->post('/api/agent/tools/{name}', fn($req, $name) => $make()->executeTool($req, $name));
         $router->post('/api/agent/chat', fn($req) => $make()->chat($req));
         $router->post('/api/agent/workflow', fn($req) => $make()->workflow($req));
         $router->post('/api/agent/memory', fn($req) => $make()->saveMemory($req));
         $router->get('/api/agent/memory', fn($req) => $make()->recallMemory($req));
+        $router->post('/api/agent/reset', fn() => $make()->reset());
 
-        // Memory management routes (RepoMemory-style)
+        // Memory management routes
         if ($container->has(MemoryService::class)) {
             $mem = fn() => $container->get(MemoryService::class);
 
@@ -164,89 +227,58 @@ class AgentServiceProvider
                 return $mem()->getProfile($agentId, $userId) ?? ['error' => 'No profile'];
             });
         }
-        $router->post('/api/agent/reset', fn() => $make()->reset());
 
-        // A2D entity endpoints (auto-generated CRUD for materialized entities)
+        // A2D entity endpoints
         if ($container->has(EntityMaterializer::class)) {
             $mat = fn() => $container->get(EntityMaterializer::class);
 
             $router->get('/api/entities', fn() => $mat()->listSchemas());
-
             $router->post('/api/entities', function ($req) use ($mat) {
-                $def = $req->json();
-                $schema = new EntitySchema($def);
+                $schema = new EntitySchema($req->json());
                 return $mat()->materialize($schema);
             });
-
             $router->get('/api/entities/{entity}', function ($req, $entity) use ($mat) {
                 $filters = $req->json() ?: [];
                 $limit = (int) $req->query('limit', 50);
                 return $mat()->findAll($entity, $filters, $limit);
             });
-
             $router->post('/api/entities/{entity}', function ($req, $entity) use ($mat) {
                 return $mat()->insert($entity, $req->json());
             });
-
             $router->get('/api/entities/{entity}/{id}', function ($req, $entity, $id) use ($mat) {
                 return $mat()->find($entity, (int) $id) ?? ['error' => 'Not found'];
             });
-
             $router->put('/api/entities/{entity}/{id}', function ($req, $entity, $id) use ($mat) {
                 return $mat()->update($entity, (int) $id, $req->json());
             });
-
             $router->delete('/api/entities/{entity}/{id}', function ($req, $entity, $id) use ($mat) {
                 return $mat()->delete($entity, (int) $id);
             });
         }
 
-        // Scheduler endpoints + pseudo-cron tick
+        // Scheduler endpoints
         if ($container->has(Scheduler::class)) {
             $sched = fn() => $container->get(Scheduler::class);
-
             $router->get('/api/schedules', fn() => $sched()->list());
-
-            $router->post('/api/schedules', function ($req) use ($sched) {
-                return $sched()->schedule($req->json());
-            });
-
-            $router->delete('/api/schedules/{id}', function ($req, $id) use ($sched) {
-                return $sched()->unschedule($id);
-            });
-
-            $router->get('/api/schedules/{id}/history', function ($req, $id) use ($sched) {
-                return $sched()->history($id, (int) $req->query('limit', 20));
-            });
-
+            $router->post('/api/schedules', function ($req) use ($sched) { return $sched()->schedule($req->json()); });
+            $router->delete('/api/schedules/{id}', function ($req, $id) use ($sched) { return $sched()->unschedule($id); });
+            $router->get('/api/schedules/{id}/history', function ($req, $id) use ($sched) { return $sched()->history($id, (int) $req->query('limit', 20)); });
             $router->post('/api/cron/tick', fn() => $sched()->tick());
-
-            // Pseudo-cron: tick on every request (lightweight check)
             register_shutdown_function(function () use ($sched) {
-                try {
-                    $sched()->tick();
-                } catch (\Throwable) {
-                    // Never break the main request
-                }
+                try { $sched()->tick(); } catch (\Throwable) {}
             });
         }
 
         // A2I service endpoints
         if ($container->has(IntegrationManager::class)) {
             $intMgr = fn() => $container->get(IntegrationManager::class);
-
             $router->get('/api/services', fn() => $intMgr()->listServices());
-
             $router->post('/api/services', function ($req) use ($intMgr, $container) {
                 $def = new ServiceDefinition($req->json());
-                $agent = $container->get(AgentService::class);
+                $agent = $container->get(AgentFacade::class);
                 return $intMgr()->integrate($def, $agent);
             });
-
-            $router->delete('/api/services/{name}', function ($req, $name) use ($intMgr) {
-                return $intMgr()->remove($name);
-            });
-
+            $router->delete('/api/services/{name}', function ($req, $name) use ($intMgr) { return $intMgr()->remove($name); });
             $router->post('/api/services/{name}/test', function ($req, $name) use ($intMgr) {
                 $def = $intMgr()->getService($name);
                 if (!$def) return ['error' => 'Not found', 'status' => 404];
@@ -257,217 +289,130 @@ class AgentServiceProvider
         // A2P page endpoints
         if ($container->has(PageBuilder::class)) {
             $pb = fn() => $container->get(PageBuilder::class);
-
             $router->get('/api/pages', fn() => $pb()->list());
-
-            $router->post('/api/pages', function ($req) use ($pb) {
-                return $pb()->define($req->json());
-            });
-
+            $router->post('/api/pages', function ($req) use ($pb) { return $pb()->define($req->json()); });
             $router->get('/api/pages/catalog', fn() => $pb()->catalog());
-
             $router->get('/api/pages/{slug}', function ($req, $slug) use ($pb) {
-                // Extract params from query string (e.g., ?id=42)
                 $params = [];
-                if (method_exists($req, 'queryAll')) {
-                    $params = $req->queryAll();
-                } else {
-                    parse_str($_SERVER['QUERY_STRING'] ?? '', $params);
-                }
+                parse_str($_SERVER['QUERY_STRING'] ?? '', $params);
                 $rendered = $pb()->render($slug, $params);
                 if (!$rendered) return ['error' => 'Page not found', 'status' => 404];
                 return $rendered;
             });
-
-            $router->delete('/api/pages/{slug}', function ($req, $slug) use ($pb) {
-                return $pb()->remove($slug);
-            });
+            $router->delete('/api/pages/{slug}', function ($req, $slug) use ($pb) { return $pb()->remove($slug); });
         }
 
         // A2T test endpoint
         if ($container->has(TestRunner::class)) {
             $router->post('/api/agent/test', function ($req) use ($container) {
-                $body = $req->json();
-                $runner = $container->get(TestRunner::class);
-                return $runner->run($body);
+                return $container->get(TestRunner::class)->run($req->json());
             });
         }
 
-        // Scaffolding endpoints (conversational system builder)
+        // Scaffolding endpoints
         if ($container->has(Scaffolding\ScaffoldingEngine::class)) {
             $scaff = fn() => $container->get(Scaffolding\ScaffoldingEngine::class);
-
             $router->post('/api/scaffold', function ($req) use ($scaff) {
-                $body = $req->json();
-                $message = $body['message'] ?? '';
+                $message = ($req->json())['message'] ?? '';
                 if (empty($message)) return ['error' => 'Message is required'];
                 return $scaff()->process($message);
             });
-
             $router->get('/api/scaffold', fn() => $scaff()->status());
-
             $router->post('/api/scaffold/reset', fn() => $scaff()->reset());
         }
 
         // Project management endpoints
         if ($container->has(Project\ProjectManager::class)) {
             $pm = fn() => $container->get(Project\ProjectManager::class);
-
             $router->get('/api/projects', fn() => $pm()->list());
-
             $router->post('/api/projects', function ($req) use ($pm) {
                 $b = $req->json();
                 return $pm()->create($b['name'] ?? '', $b['description'] ?? '');
             });
-
-            $router->get('/api/projects/{id}', function ($req, $id) use ($pm) {
-                return $pm()->get($id) ?? ['error' => 'Not found'];
-            });
-
+            $router->get('/api/projects/{id}', function ($req, $id) use ($pm) { return $pm()->get($id) ?? ['error' => 'Not found']; });
             $router->post('/api/projects/{id}/activate', function ($req, $id) use ($pm, $container) {
                 $result = $pm()->activate($id);
                 if (isset($result['error'])) return $result;
-
-                // Rebind all project-scoped services to new project paths
                 $paths = $pm()->activePaths();
-                $agent = $container->get(AgentService::class);
-
-                // Scaffolding
+                $agent = $container->get(AgentFacade::class);
                 if ($container->has(Scaffolding\ScaffoldingEngine::class)) {
-                    $provider = null;
-                    try {
-                        $ref = new \ReflectionProperty(Scaffolding\ScaffoldingEngine::class, 'provider');
-                        $ref->setAccessible(true);
-                        $provider = $ref->getValue($container->get(Scaffolding\ScaffoldingEngine::class));
-                    } catch (\Throwable $e) {}
+                    $provider = $agent->getProvider();
                     $container->instance(Scaffolding\ScaffoldingEngine::class, new Scaffolding\ScaffoldingEngine($agent, $paths['scaffolding'], $provider));
                 }
-
-                // PageBuilder
                 $container->instance(PageBuilder::class, new PageBuilder($paths['pages'], $agent));
-
-                // IntegrationManager
                 $container->instance(IntegrationManager::class, new IntegrationManager($paths['integrations']));
-
-                // Scheduler
                 if ($container->has(WorkflowEngine::class)) {
                     $container->instance(Scheduler::class, new Scheduler($container->get(WorkflowEngine::class), $paths['schedules']));
                 }
-
                 return $result;
             });
-
-            $router->put('/api/projects/{id}', function ($req, $id) use ($pm) {
-                $b = $req->json();
-                return $pm()->rename($id, $b['name'] ?? '');
-            });
-
-            $router->delete('/api/projects/{id}', function ($req, $id) use ($pm) {
-                return $pm()->delete($id);
-            });
+            $router->put('/api/projects/{id}', function ($req, $id) use ($pm) { return $pm()->rename($id, ($req->json())['name'] ?? ''); });
+            $router->delete('/api/projects/{id}', function ($req, $id) use ($pm) { return $pm()->delete($id); });
         }
 
-        // Builder dashboard endpoint — reads from active project storage
+        // Builder dashboard
         $router->get('/api/builder/status', function () use ($container) {
             $status = ['timestamp' => date('c')];
-
-            // Determine paths: project-specific or global
             $paths = null;
             if ($container->has(Project\ProjectManager::class)) {
                 $pm = $container->get(Project\ProjectManager::class);
                 $paths = $pm->activePaths();
                 $status['project'] = $pm->activeId();
             }
-
             $pagesPath = $paths ? $paths['pages'] : 'storage/agent/pages';
             $servicesPath = $paths ? $paths['integrations'] : 'storage/agent/integrations';
             $schedulesPath = $paths ? $paths['schedules'] : 'storage/agent/schedules';
             $memoryPath = $paths ? $paths['memory'] : 'storage/agent/memory';
             $scaffoldPath = $paths ? $paths['scaffolding'] : 'storage/agent/scaffolding';
 
-            // Entities — always from DB (shared), filter by project context
             if ($container->has(EntityMaterializer::class)) {
                 $schemas = $container->get(EntityMaterializer::class)->listSchemas();
                 $entities = [];
                 foreach ($schemas as $name => $schema) {
                     $count = 0;
-                    try { $count = count($container->get(EntityMaterializer::class)->findAll($name, [], 1000)); } catch (\Throwable $e) {}
+                    try { $count = count($container->get(EntityMaterializer::class)->findAll($name, [], 1000)); } catch (\Throwable) {}
                     $entities[] = ['name' => $name, 'label' => $schema['label'] ?? $name, 'fields' => count($schema['fields'] ?? []), 'records' => $count];
                 }
                 $status['entities'] = $entities;
             }
 
-            // Pages — from project storage
             $pagesFile = $pagesPath . '/pages.json';
-            if (file_exists($pagesFile)) {
-                $pages = json_decode(file_get_contents($pagesFile), true) ?: [];
-                $status['pages'] = array_map(fn($p) => [
-                    'slug'     => $p['slug'] ?? '',
-                    'title'    => $p['title'] ?? '',
-                    'template' => $p['template'] ?? '',
-                    'layout'   => $p['layout'] ?? '',
-                    'sections' => count($p['sections'] ?? []),
-                    'auth'     => $p['auth']['required'] ?? false,
-                ], array_values($pages));
-            } else {
-                $status['pages'] = [];
-            }
+            $status['pages'] = file_exists($pagesFile) ? array_map(fn($p) => [
+                'slug' => $p['slug'] ?? '', 'title' => $p['title'] ?? '', 'template' => $p['template'] ?? '',
+                'layout' => $p['layout'] ?? '', 'sections' => count($p['sections'] ?? []), 'auth' => $p['auth']['required'] ?? false,
+            ], array_values(json_decode(file_get_contents($pagesFile), true) ?: [])) : [];
 
-            // Services — from project storage
             $servicesFile = $servicesPath . '/services.json';
-            if (file_exists($servicesFile)) {
-                $services = json_decode(file_get_contents($servicesFile), true) ?: [];
-                $status['services'] = array_values($services);
-            } else {
-                $status['services'] = [];
-            }
+            $status['services'] = file_exists($servicesFile) ? array_values(json_decode(file_get_contents($servicesFile), true) ?: []) : [];
 
-            // Schedules — from project storage
             $schedulesFile = $schedulesPath . '/schedules.json';
-            if (file_exists($schedulesFile)) {
-                $schedules = json_decode(file_get_contents($schedulesFile), true) ?: [];
-                $status['schedules'] = array_values($schedules);
-            } else {
-                $status['schedules'] = [];
-            }
+            $status['schedules'] = file_exists($schedulesFile) ? array_values(json_decode(file_get_contents($schedulesFile), true) ?: []) : [];
 
-            // Memory — count files in project memory dirs
             $memStats = ['memories' => 0, 'skills' => 0, 'knowledge' => 0, 'sessions' => 0, 'profile' => false];
             foreach (['memories', 'skills', 'knowledge', 'sessions'] as $col) {
                 $dir = $memoryPath . '/' . $col;
                 if (is_dir($dir)) {
                     $iter = new \RecursiveIteratorIterator(new \RecursiveDirectoryIterator($dir, \FilesystemIterator::SKIP_DOTS));
-                    foreach ($iter as $f) {
-                        if ($f->getExtension() === 'json') $memStats[$col]++;
-                    }
+                    foreach ($iter as $f) { if ($f->getExtension() === 'json') $memStats[$col]++; }
                 }
             }
             $profileDir = $memoryPath . '/profiles';
             if (is_dir($profileDir)) {
                 $iter = new \RecursiveIteratorIterator(new \RecursiveDirectoryIterator($profileDir, \FilesystemIterator::SKIP_DOTS));
-                foreach ($iter as $f) {
-                    if ($f->getExtension() === 'json') { $memStats['profile'] = true; break; }
-                }
+                foreach ($iter as $f) { if ($f->getExtension() === 'json') { $memStats['profile'] = true; break; } }
             }
             $status['memory'] = $memStats;
 
-            // Scaffolding — from project storage
             $scaffoldFile = $scaffoldPath . '/session.json';
-            if (file_exists($scaffoldFile)) {
-                $scaff = json_decode(file_get_contents($scaffoldFile), true) ?: [];
-                $status['scaffold'] = [
-                    'state'   => $scaff['state'] ?? 'idle',
-                    'plan'    => $scaff['plan'] ?? [],
-                    'context' => $scaff['context'] ?? [],
-                    'history' => count($scaff['history'] ?? []),
-                ];
-            } else {
-                $status['scaffold'] = ['state' => 'idle', 'plan' => [], 'context' => [], 'history' => 0];
-            }
+            $status['scaffold'] = file_exists($scaffoldFile)
+                ? (function () use ($scaffoldFile) {
+                    $s = json_decode(file_get_contents($scaffoldFile), true) ?: [];
+                    return ['state' => $s['state'] ?? 'idle', 'plan' => $s['plan'] ?? [], 'context' => $s['context'] ?? [], 'history' => count($s['history'] ?? [])];
+                })()
+                : ['state' => 'idle', 'plan' => [], 'context' => [], 'history' => 0];
 
-            // Tools count
-            if ($container->has(AgentService::class)) {
-                $status['tools'] = count($container->get(AgentService::class)->listTools());
+            if ($container->has(AgentFacade::class)) {
+                $status['tools'] = count($container->get(AgentFacade::class)->listTools());
             }
 
             return $status;
@@ -476,294 +421,269 @@ class AgentServiceProvider
         // MCP endpoint
         $router->post('/api/mcp', function ($req) use ($container) {
             $mcp = new MCPController(
-                new MCPServer($container->get(AgentService::class))
+                new MCPServer($container->get(AgentFacade::class))
             );
             return $mcp->handle($req);
         });
     }
 
-    private static function createProvider(array $config): Provider\AIProviderInterface
+    private static function createProvider(array $config): ProviderInterface
     {
         $name = $config['provider'] ?? 'ollama';
         $conf = $config['providers'][$name] ?? [];
 
         return match ($name) {
             'ollama' => new OllamaProvider(
-                model:       $conf['model'] ?? 'llama3.1',
-                host:        $conf['host'] ?? 'http://localhost:11434',
-                temperature: (float)($conf['temperature'] ?? 0.7),
+                model: $conf['model'] ?? 'qwen2.5:7b',
+                host: $conf['host'] ?? 'http://localhost:11434',
+                temperature: (float) ($conf['temperature'] ?? 0.7),
             ),
-            default => new HttpProvider(
-                url:         $conf['url'] ?? '',
-                apiKey:      $conf['api_key'] ?? '',
-                model:       $conf['model'] ?? '',
-                temperature: (float)($conf['temperature'] ?? 0.7),
-                maxTokens:   (int)($conf['max_tokens'] ?? 4096),
+            'cloudflare', 'workers-ai' => new WorkersAIProvider(
+                accountId: $conf['account_id'] ?? ($config['cf_account_id'] ?? ''),
+                apiToken: $conf['api_token'] ?? ($config['cf_api_token'] ?? ''),
+                model: $conf['model'] ?? '@cf/ibm-granite/granite-4.0-h-micro',
             ),
+            'openrouter' => new OpenRouterProvider(
+                apiKey: $conf['api_key'] ?? '',
+                model: $conf['model'] ?? 'nousresearch/hermes-4-scout',
+            ),
+            'openai' => new OpenAIProvider(
+                apiKey: $conf['api_key'] ?? '',
+                model: $conf['model'] ?? 'gpt-4o-mini',
+                temperature: (float) ($conf['temperature'] ?? 0.7),
+            ),
+            default => new OllamaProvider(model: 'qwen2.5:7b'),
         };
     }
 
-    private static function registerBuiltinTools(AgentService $agent, Container $container, array $config): void
+    private static function loadOptionalBridges(ToolRegistry $tools): void
     {
-        $enabled = $config['builtin_tools'] ?? [];
-
-        if (in_array('search_content', $enabled) && $container->has(SearchService::class)) {
-            $search = $container->get(SearchService::class);
-            $agent->addTool(
-                Tool::make('search_content', 'Search site content semantically by meaning, not just keywords.')
-                    ->param('query', 'string', 'Natural language search query', true)
-                    ->param('type', 'string', 'Content type filter (post, page). Optional.')
-                    ->param('limit', 'integer', 'Max results (default 5)')
-                    ->handler(fn($query, $type = '', $limit = 5) =>
-                        $type
-                            ? $search->hybridSearch($type, $query, (int)$limit, ['status' => 'published'])
-                            : $search->searchAll($query, (int)$limit)
-                    )
-            );
+        // Shell bridge (optional: php-agent-shell)
+        if (class_exists(\PHPAgentShell\AgentShell::class)) {
+            try {
+                foreach (\ChimeraNoWP\Agent\Bridge\ShellBridge::tools(new \PHPAgentShell\AgentShell()) as $tool) {
+                    $tools->register($tool);
+                }
+            } catch (\Throwable) {}
         }
 
-        if (in_array('get_content', $enabled) && $container->has(ContentRepository::class)) {
-            $repo = $container->get(ContentRepository::class);
-            $agent->addTool(
-                Tool::make('get_content', 'Get a content item by its ID. Returns title, body, type, status.')
-                    ->param('id', 'integer', 'Content ID', true)
-                    ->handler(fn($id) => $repo->find((int)$id)?->toArray() ?? ['error' => 'Not found'])
-            );
+        // A2E bridge (optional: php-a2e)
+        if (class_exists(\PHPA2E\A2E::class)) {
+            try {
+                foreach (\ChimeraNoWP\Agent\Bridge\A2EBridge::tools(new \PHPA2E\A2E()) as $tool) {
+                    $tools->register($tool);
+                }
+            } catch (\Throwable) {}
         }
+    }
 
-        if (in_array('create_content', $enabled) && $container->has(ContentService::class)) {
-            $service = $container->get(ContentService::class);
-            $agent->addTool(
-                Tool::make('create_content', 'Create a new content item (post or page).')
-                    ->param('title', 'string', 'Content title', true)
-                    ->param('body', 'string', 'Content body (HTML allowed)', true)
-                    ->param('type', 'string', 'Content type: post or page (default: post)')
-                    ->param('status', 'string', 'Status: draft or published (default: draft)')
-                    ->handler(fn($title, $body, $type = 'post', $status = 'draft') =>
-                        $service->create([
-                            'title' => $title, 'content' => $body,
-                            'type' => $type, 'status' => $status,
-                            'author_id' => 1,
-                        ])->toArray()
-                    )
-            );
-        }
-
-        // A2D tools — agent can define and manage data entities
+    private static function registerExtendedTools(ToolRegistry $tools, Container $container, array $config, AgentFacade $facade): void
+    {
+        // A2D entity tools
         if ($container->has(EntityMaterializer::class)) {
             $mat = $container->get(EntityMaterializer::class);
 
-            $agent->addTool(
-                Tool::make('define_entity', 'Define a new data entity. Creates the database table, CRUD operations, validation, and optional search index. Use this when you need to store a new type of structured data.')
-                    ->param('entity', 'string', 'Entity name (lowercase, underscores)', true)
-                    ->param('label', 'string', 'Human-readable label')
-                    ->param('description', 'string', 'What this entity represents')
-                    ->param('fields', 'array', 'Array of field definitions: [{name, type, required, values, target}]', true)
-                    ->param('search', 'boolean', 'Enable semantic search on this entity (default false)')
-                    ->param('api', 'boolean', 'Generate REST API endpoints (default true)')
-                    ->handler(function ($entity, $label = '', $description = '', $fields = [], $search = false, $api = true) use ($mat) {
-                        $schema = new EntitySchema([
-                            'entity' => $entity, 'label' => $label,
-                            'description' => $description, 'fields' => $fields,
-                            'search' => $search, 'api' => $api,
-                        ]);
-                        return $mat->materialize($schema);
-                    })
-            );
+            $tools->register(new ToolDefinition('define_entity', 'Define a new data entity. Creates DB table, CRUD, validation, and optional search.', [
+                'type' => 'object', 'properties' => [
+                    'entity' => ['type' => 'string', 'description' => 'Entity name (lowercase, underscores)'],
+                    'label' => ['type' => 'string'], 'description' => ['type' => 'string'],
+                    'fields' => ['type' => 'array', 'description' => 'Field defs: [{name, type, required, values, target}]'],
+                    'search' => ['type' => 'boolean'], 'api' => ['type' => 'boolean'],
+                ], 'required' => ['entity', 'fields'],
+            ], fn($a) => json_encode($mat->materialize(new EntitySchema($a))), category: 'entity'));
 
-            $agent->addTool(
-                Tool::make('list_entities', 'List all defined data entities with their schemas.')
-                    ->handler(fn() => $mat->listSchemas())
-            );
+            $tools->register(new ToolDefinition('list_entities', 'List all data entities.', [
+                'type' => 'object', 'properties' => (object)[], 'required' => [],
+            ], fn($a) => json_encode($mat->listSchemas()), safe: true, category: 'entity'));
 
-            $agent->addTool(
-                Tool::make('entity_insert', 'Insert a record into a data entity.')
-                    ->param('entity', 'string', 'Entity name', true)
-                    ->param('data', 'object', 'Record data as key-value pairs', true)
-                    ->handler(fn($entity, $data) => $mat->insert($entity, $data))
-            );
+            $tools->register(new ToolDefinition('entity_insert', 'Insert a record.', [
+                'type' => 'object', 'properties' => [
+                    'entity' => ['type' => 'string'], 'data' => ['type' => 'object'],
+                ], 'required' => ['entity', 'data'],
+            ], fn($a) => json_encode($mat->insert($a['entity'], $a['data'])), category: 'entity'));
 
-            $agent->addTool(
-                Tool::make('entity_find', 'Find a record by ID in a data entity.')
-                    ->param('entity', 'string', 'Entity name', true)
-                    ->param('id', 'integer', 'Record ID', true)
-                    ->handler(fn($entity, $id) => $mat->find($entity, (int)$id) ?? ['error' => 'Not found'])
-            );
+            $tools->register(new ToolDefinition('entity_find', 'Find record by ID.', [
+                'type' => 'object', 'properties' => [
+                    'entity' => ['type' => 'string'], 'id' => ['type' => 'integer'],
+                ], 'required' => ['entity', 'id'],
+            ], fn($a) => json_encode($mat->find($a['entity'], (int) $a['id']) ?? ['error' => 'Not found']), safe: true, category: 'entity'));
 
-            $agent->addTool(
-                Tool::make('entity_list', 'List records from a data entity with optional filters.')
-                    ->param('entity', 'string', 'Entity name', true)
-                    ->param('filters', 'object', 'Filter conditions as key-value pairs')
-                    ->param('limit', 'integer', 'Max records (default 50)')
-                    ->handler(fn($entity, $filters = [], $limit = 50) => $mat->findAll($entity, $filters, (int)$limit))
-            );
+            $tools->register(new ToolDefinition('entity_list', 'List records with filters.', [
+                'type' => 'object', 'properties' => [
+                    'entity' => ['type' => 'string'], 'filters' => ['type' => 'object'], 'limit' => ['type' => 'integer'],
+                ], 'required' => ['entity'],
+            ], fn($a) => json_encode($mat->findAll($a['entity'], $a['filters'] ?? [], (int) ($a['limit'] ?? 50))), safe: true, category: 'entity'));
 
-            $agent->addTool(
-                Tool::make('entity_update', 'Update a record in a data entity.')
-                    ->param('entity', 'string', 'Entity name', true)
-                    ->param('id', 'integer', 'Record ID', true)
-                    ->param('data', 'object', 'Fields to update', true)
-                    ->handler(fn($entity, $id, $data) => $mat->update($entity, (int)$id, $data))
-            );
+            $tools->register(new ToolDefinition('entity_update', 'Update a record.', [
+                'type' => 'object', 'properties' => [
+                    'entity' => ['type' => 'string'], 'id' => ['type' => 'integer'], 'data' => ['type' => 'object'],
+                ], 'required' => ['entity', 'id', 'data'],
+            ], fn($a) => json_encode($mat->update($a['entity'], (int) $a['id'], $a['data'])), category: 'entity'));
 
-            $agent->addTool(
-                Tool::make('entity_delete', 'Delete a record from a data entity.')
-                    ->param('entity', 'string', 'Entity name', true)
-                    ->param('id', 'integer', 'Record ID', true)
-                    ->handler(fn($entity, $id) => $mat->delete($entity, (int)$id))
-            );
+            $tools->register(new ToolDefinition('entity_delete', 'Delete a record.', [
+                'type' => 'object', 'properties' => [
+                    'entity' => ['type' => 'string'], 'id' => ['type' => 'integer'],
+                ], 'required' => ['entity', 'id'],
+            ], fn($a) => json_encode($mat->delete($a['entity'], (int) $a['id'])), category: 'entity'));
 
-            $agent->addTool(
-                Tool::make('entity_search', 'Semantic search within a data entity. Only works if entity has search enabled.')
-                    ->param('entity', 'string', 'Entity name', true)
-                    ->param('query', 'string', 'Natural language search query', true)
-                    ->param('limit', 'integer', 'Max results (default 10)')
-                    ->handler(fn($entity, $query, $limit = 10) => $mat->search($entity, $query, (int)$limit))
-            );
+            $tools->register(new ToolDefinition('entity_search', 'Semantic search within an entity.', [
+                'type' => 'object', 'properties' => [
+                    'entity' => ['type' => 'string'], 'query' => ['type' => 'string'], 'limit' => ['type' => 'integer'],
+                ], 'required' => ['entity', 'query'],
+            ], fn($a) => json_encode($mat->search($a['entity'], $a['query'], (int) ($a['limit'] ?? 10))), safe: true, category: 'entity'));
 
-            // A2T tool — agent can run declarative tests
-            $workflowEngine = $container->has(WorkflowEngine::class)
-                ? $container->get(WorkflowEngine::class)
-                : new WorkflowEngine();
+            // A2T test runner
+            $workflowEngine = $container->has(WorkflowEngine::class) ? $container->get(WorkflowEngine::class) : new WorkflowEngine();
             $pb = $container->has(PageBuilder::class) ? $container->get(PageBuilder::class) : null;
-            $runner = new TestRunner($mat, $workflowEngine, $agent, $pb);
+            $runner = new TestRunner($mat, $workflowEngine, $facade, $pb);
             $container->singleton(TestRunner::class, fn() => $runner);
 
-            $agent->addTool(
-                Tool::make('run_tests', 'Run a declarative test suite to verify entity schemas, CRUD operations, validation rules, and workflows. Use after defining entities or workflows to verify they work correctly.')
-                    ->param('suite', 'string', 'Test suite name', true)
-                    ->param('tests', 'array', 'Array of test assertions: [{assert, entity, data, expect, ...}]', true)
-                    ->handler(fn($suite, $tests) => $runner->run(['suite' => $suite, 'tests' => $tests]))
-            );
+            $tools->register(new ToolDefinition('run_tests', 'Run declarative test suite.', [
+                'type' => 'object', 'properties' => [
+                    'suite' => ['type' => 'string'], 'tests' => ['type' => 'array'],
+                ], 'required' => ['suite', 'tests'],
+            ], fn($a) => json_encode($runner->run(['suite' => $a['suite'], 'tests' => $a['tests']])), category: 'testing'));
         }
 
-        // A2I tools — agent can define external service integrations
+        // A2I integration tools
         if ($container->has(IntegrationManager::class)) {
             $intMgr = $container->get(IntegrationManager::class);
 
-            $agent->addTool(
-                Tool::make('integrate_service', 'Connect to an external REST API service. Creates stored credentials and one tool per endpoint. Use when you need to interact with a third-party API like Stripe, GitHub, Slack, etc.')
-                    ->param('service', 'string', 'Service name (lowercase, underscores)', true)
-                    ->param('label', 'string', 'Human-readable label')
-                    ->param('base_url', 'string', 'API base URL (e.g. https://api.stripe.com/v1)', true)
-                    ->param('auth', 'object', 'Auth config: {type: "bearer", key: "sk_...", key_env: "STRIPE_KEY"}', true)
-                    ->param('endpoints', 'array', 'Array of endpoints: [{name, method, path, params, body, description}]', true)
-                    ->param('test', 'object', 'Connection test: {endpoint: "name", expect_status: 200}')
-                    ->handler(function ($service, $label = '', $base_url = '', $auth = [], $endpoints = [], $test = []) use ($intMgr, $agent) {
-                        $def = new ServiceDefinition([
-                            'service' => $service, 'label' => $label,
-                            'base_url' => $base_url, 'auth' => $auth,
-                            'endpoints' => $endpoints, 'test' => $test,
-                        ]);
-                        return $intMgr->integrate($def, $agent);
-                    })
-            );
+            $tools->register(new ToolDefinition('integrate_service', 'Connect to external REST API.', [
+                'type' => 'object', 'properties' => [
+                    'service' => ['type' => 'string'], 'label' => ['type' => 'string'],
+                    'base_url' => ['type' => 'string'], 'auth' => ['type' => 'object'],
+                    'endpoints' => ['type' => 'array'], 'test' => ['type' => 'object'],
+                ], 'required' => ['service', 'base_url', 'auth', 'endpoints'],
+            ], fn($a) => json_encode($intMgr->integrate(new ServiceDefinition($a), $facade)), category: 'integration'));
 
-            $agent->addTool(
-                Tool::make('list_services', 'List all integrated external services.')
-                    ->handler(fn() => $intMgr->listServices())
-            );
+            $tools->register(new ToolDefinition('list_services', 'List integrated services.', [
+                'type' => 'object', 'properties' => (object)[], 'required' => [],
+            ], fn($a) => json_encode($intMgr->listServices()), safe: true, category: 'integration'));
 
-            $agent->addTool(
-                Tool::make('remove_service', 'Remove an external service integration.')
-                    ->param('service', 'string', 'Service name to remove', true)
-                    ->handler(fn($service) => $intMgr->remove($service))
-            );
-
-            $agent->addTool(
-                Tool::make('test_service', 'Test connection to an integrated service.')
-                    ->param('service', 'string', 'Service name to test', true)
-                    ->handler(function ($service) use ($intMgr) {
-                        $def = $intMgr->getService($service);
-                        if (!$def) return ['error' => "Service '{$service}' not found"];
-                        return $intMgr->testConnection($def);
-                    })
-            );
+            $tools->register(new ToolDefinition('remove_service', 'Remove a service integration.', [
+                'type' => 'object', 'properties' => ['service' => ['type' => 'string']], 'required' => ['service'],
+            ], fn($a) => json_encode($intMgr->remove($a['service'])), category: 'integration'));
         }
 
-        // Scheduler tools — autonomous workflow execution
+        // Scheduler tools
         if ($container->has(Scheduler::class)) {
             $sched = $container->get(Scheduler::class);
 
-            $agent->addTool(
-                Tool::make('schedule_workflow', 'Schedule a workflow to run automatically on an interval. Makes the agent autonomous — it can act without being asked.')
-                    ->param('id', 'string', 'Schedule ID (unique name)')
-                    ->param('name', 'string', 'Human-readable name', true)
-                    ->param('steps', 'array', 'Workflow steps to execute', true)
-                    ->param('interval', 'string', 'Interval: every_minute, every_5min, hourly, daily, weekly, or Nm/Nh/Nd', true)
-                    ->param('input', 'object', 'Initial data for each run')
-                    ->param('enabled', 'boolean', 'Start immediately (default true)')
-                    ->handler(fn($id = null, $name = '', $steps = [], $interval = 'hourly', $input = null, $enabled = true) =>
-                        $sched->schedule([
-                            'id' => $id, 'name' => $name, 'steps' => $steps,
-                            'interval' => $interval, 'input' => $input, 'enabled' => $enabled,
-                        ])
-                    )
-            );
+            $tools->register(new ToolDefinition('schedule_workflow', 'Schedule autonomous workflow.', [
+                'type' => 'object', 'properties' => [
+                    'name' => ['type' => 'string'], 'steps' => ['type' => 'array'],
+                    'interval' => ['type' => 'string'], 'input' => ['type' => 'object'],
+                ], 'required' => ['name', 'steps', 'interval'],
+            ], fn($a) => json_encode($sched->schedule($a)), category: 'scheduler'));
 
-            $agent->addTool(
-                Tool::make('list_schedules', 'List all scheduled workflows with their status and next run time.')
-                    ->handler(fn() => $sched->list())
-            );
+            $tools->register(new ToolDefinition('list_schedules', 'List scheduled workflows.', [
+                'type' => 'object', 'properties' => (object)[], 'required' => [],
+            ], fn($a) => json_encode($sched->list()), safe: true, category: 'scheduler'));
 
-            $agent->addTool(
-                Tool::make('unschedule_workflow', 'Stop and remove a scheduled workflow.')
-                    ->param('id', 'string', 'Schedule ID to remove', true)
-                    ->handler(fn($id) => $sched->unschedule($id))
-            );
-
-            $agent->addTool(
-                Tool::make('pause_schedule', 'Pause or resume a scheduled workflow.')
-                    ->param('id', 'string', 'Schedule ID', true)
-                    ->param('enabled', 'boolean', 'true to resume, false to pause', true)
-                    ->handler(fn($id, $enabled) => $sched->setEnabled($id, (bool)$enabled))
-            );
-
-            $agent->addTool(
-                Tool::make('schedule_history', 'Get execution history for a scheduled workflow.')
-                    ->param('id', 'string', 'Schedule ID', true)
-                    ->param('limit', 'integer', 'Max entries (default 20)')
-                    ->handler(fn($id, $limit = 20) => $sched->history($id, (int)$limit))
-            );
+            $tools->register(new ToolDefinition('unschedule_workflow', 'Remove a scheduled workflow.', [
+                'type' => 'object', 'properties' => ['id' => ['type' => 'string']], 'required' => ['id'],
+            ], fn($a) => json_encode($sched->unschedule($a['id'])), category: 'scheduler'));
         }
 
-        // A2P tools — agent can define pages and UI
+        // A2P page tools
         if ($container->has(PageBuilder::class)) {
             $pb = $container->get(PageBuilder::class);
 
-            $agent->addTool(
-                Tool::make('define_page', 'Define a page using template, layout, and components from the catalog. Creates a complete UI page that the frontend can render.')
-                    ->param('page', 'string', 'Page slug (URL path)', true)
-                    ->param('title', 'string', 'Page title', true)
-                    ->param('template', 'string', 'Template: dashboard, list-page, detail-page, form-page, login-page, landing-page, settings-page, error-page', true)
-                    ->param('layout', 'string', 'Layout: admin-sidebar, public-centered, fullwidth, split, stacked')
-                    ->param('sections', 'array', 'Array of sections: [{slot, component, props}]', true)
-                    ->param('auth', 'object', 'Auth config: {required: true, role: "admin"}')
-                    ->param('description', 'string', 'Page description')
-                    ->handler(fn($page, $title = '', $template = 'dashboard', $layout = 'admin-sidebar', $sections = [], $auth = [], $description = '') =>
-                        $pb->define([
-                            'page' => $page, 'title' => $title, 'template' => $template,
-                            'layout' => $layout, 'sections' => $sections,
-                            'auth' => $auth, 'description' => $description,
-                        ])
-                    )
-            );
+            $tools->register(new ToolDefinition('define_page', 'Define a UI page with template and components.', [
+                'type' => 'object', 'properties' => [
+                    'page' => ['type' => 'string'], 'title' => ['type' => 'string'],
+                    'template' => ['type' => 'string'], 'layout' => ['type' => 'string'],
+                    'sections' => ['type' => 'array'], 'auth' => ['type' => 'object'],
+                ], 'required' => ['page', 'title', 'template', 'sections'],
+            ], fn($a) => json_encode($pb->define($a)), category: 'page'));
 
-            $agent->addTool(
-                Tool::make('list_pages', 'List all defined pages.')
-                    ->handler(fn() => $pb->list())
-            );
+            $tools->register(new ToolDefinition('list_pages', 'List all pages.', [
+                'type' => 'object', 'properties' => (object)[], 'required' => [],
+            ], fn($a) => json_encode($pb->list()), safe: true, category: 'page'));
 
-            $agent->addTool(
-                Tool::make('remove_page', 'Remove a page definition.')
-                    ->param('page', 'string', 'Page slug to remove', true)
-                    ->handler(fn($page) => $pb->remove($page))
-            );
+            $tools->register(new ToolDefinition('get_component_catalog', 'Get available UI components.', [
+                'type' => 'object', 'properties' => (object)[], 'required' => [],
+            ], fn($a) => json_encode($pb->catalog()), safe: true, category: 'page'));
+        }
 
-            $agent->addTool(
-                Tool::make('get_component_catalog', 'Get the full component catalog — all available atoms, molecules, organisms, templates, and layouts the agent can use to build pages.')
-                    ->handler(fn() => $pb->catalog())
-            );
+        // Plugin management tools
+        if ($container->has(\ChimeraNoWP\Plugin\PluginManager::class)) {
+            $pm = $container->get(\ChimeraNoWP\Plugin\PluginManager::class);
+
+            $tools->register(new ToolDefinition(
+                'deploy_plugin',
+                'Write a PHP plugin file to plugins/{name}/{name}.php and activate it. The code must define class Plugins\\{ClassName}\\{ClassName} implementing PluginInterface. Active on next request.',
+                [
+                    'type' => 'object',
+                    'properties' => [
+                        'name'    => ['type' => 'string', 'description' => 'Plugin slug: lowercase letters, numbers, hyphens (e.g. "invoice-generator")'],
+                        'code'    => ['type' => 'string', 'description' => 'Full PHP source of the plugin file'],
+                    ],
+                    'required' => ['name', 'code'],
+                ],
+                function ($a) use ($pm) {
+                    $name = preg_replace('/[^a-z0-9-]/', '-', strtolower($a['name']));
+                    $dir  = (defined('BASE_PATH') ? BASE_PATH : getcwd()) . '/plugins/' . $name;
+
+                    if (!is_dir($dir) && !mkdir($dir, 0755, true)) {
+                        return json_encode(['error' => "Could not create directory: {$dir}"]);
+                    }
+
+                    $file = $dir . '/' . $name . '.php';
+                    if (file_put_contents($file, $a['code']) === false) {
+                        return json_encode(['error' => "Could not write file: {$file}"]);
+                    }
+
+                    // Load and activate within this request
+                    $pm->loadPlugins();
+                    $activated = $pm->activatePlugin($name);
+                    $errors    = $pm->getPluginErrors($name);
+
+                    return json_encode([
+                        'plugin'    => $name,
+                        'file'      => $file,
+                        'activated' => $activated,
+                        'errors'    => $errors,
+                        'note'      => $activated ? 'Plugin active. Routes registered on next request.' : 'Deployed but not activated — check errors.',
+                    ]);
+                },
+                category: 'plugin'
+            ));
+
+            $tools->register(new ToolDefinition(
+                'list_plugins',
+                'List all loaded plugins and their activation status.',
+                ['type' => 'object', 'properties' => (object)[], 'required' => []],
+                function ($a) use ($pm) {
+                    $active = $pm->getActivePlugins();
+                    $result = [];
+                    foreach ($pm->getPlugins() as $name => $plugin) {
+                        $result[] = [
+                            'name'    => $name,
+                            'label'   => $plugin->getName(),
+                            'version' => $plugin->getVersion(),
+                            'active'  => in_array($name, $active),
+                            'errors'  => $pm->getPluginErrors($name),
+                        ];
+                    }
+                    return json_encode(['plugins' => $result, 'total' => count($result)]);
+                },
+                safe: true,
+                category: 'plugin'
+            ));
+
+            $tools->register(new ToolDefinition(
+                'deactivate_plugin',
+                'Deactivate an active plugin.',
+                [
+                    'type' => 'object',
+                    'properties' => ['name' => ['type' => 'string', 'description' => 'Plugin slug']],
+                    'required' => ['name'],
+                ],
+                fn($a) => json_encode(['deactivated' => $pm->deactivatePlugin($a['name']), 'plugin' => $a['name']]),
+                category: 'plugin'
+            ));
         }
     }
 }

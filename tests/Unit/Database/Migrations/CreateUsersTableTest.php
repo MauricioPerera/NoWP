@@ -14,7 +14,7 @@ declare(strict_types=1);
 require_once __DIR__ . '/../../../../src/Database/Connection.php';
 require_once __DIR__ . '/../../../../migrations/2026_01_15_000001_create_users_table.php';
 
-use Framework\Database\Connection;
+use ChimeraNoWP\Database\Connection;
 
 beforeEach(function () {
     // Use in-memory SQLite for testing (MySQL syntax adapted)

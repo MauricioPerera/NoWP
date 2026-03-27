@@ -1,10 +1,10 @@
 <?php
 
-namespace Framework\Auth;
+namespace ChimeraNoWP\Auth;
 
-use Framework\Core\MiddlewareInterface;
-use Framework\Core\Request;
-use Framework\Core\Response;
+use ChimeraNoWP\Core\MiddlewareInterface;
+use ChimeraNoWP\Core\Request;
+use ChimeraNoWP\Core\Response;
 
 class PermissionMiddleware implements MiddlewareInterface
 {

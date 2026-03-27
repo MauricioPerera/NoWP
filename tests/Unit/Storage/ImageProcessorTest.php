@@ -8,7 +8,7 @@
 
 declare(strict_types=1);
 
-use Framework\Storage\ImageProcessor;
+use ChimeraNoWP\Storage\ImageProcessor;
 
 beforeEach(function () {
     $this->testImagePath = __DIR__ . '/../../fixtures/test-image.jpg';

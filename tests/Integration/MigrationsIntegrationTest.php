@@ -11,8 +11,8 @@
 
 declare(strict_types=1);
 
-use Framework\Database\Connection;
-use Framework\Database\MigrationRunner;
+use ChimeraNoWP\Database\Connection;
+use ChimeraNoWP\Database\MigrationRunner;
 
 beforeEach(function () {
     // Use in-memory SQLite for testing
@@ -129,10 +129,10 @@ it('verifies migration classes can be instantiated', function () {
     $media = new CreateMediaTable($this->connection);
     $customFields = new CreateCustomFieldsTable($this->connection);
     
-    expect($users)->toBeInstanceOf(Framework\Database\Migration::class)
-        ->and($contents)->toBeInstanceOf(Framework\Database\Migration::class)
-        ->and($media)->toBeInstanceOf(Framework\Database\Migration::class)
-        ->and($customFields)->toBeInstanceOf(Framework\Database\Migration::class);
+    expect($users)->toBeInstanceOf(ChimeraNoWP\Database\Migration::class)
+        ->and($contents)->toBeInstanceOf(ChimeraNoWP\Database\Migration::class)
+        ->and($media)->toBeInstanceOf(ChimeraNoWP\Database\Migration::class)
+        ->and($customFields)->toBeInstanceOf(ChimeraNoWP\Database\Migration::class);
 });
 
 it('verifies migration names are correct', function () {

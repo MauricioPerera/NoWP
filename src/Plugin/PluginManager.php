@@ -11,9 +11,9 @@
 
 declare(strict_types=1);
 
-namespace Framework\Plugin;
+namespace ChimeraNoWP\Plugin;
 
-use Framework\Core\Container;
+use ChimeraNoWP\Core\Container;
 
 class PluginManager
 {
@@ -43,7 +43,7 @@ class PluginManager
         Container $container,
         HookSystem $hooks,
         string $pluginsPath,
-        private ?\Framework\Core\Router $router = null
+        private ?\ChimeraNoWP\Core\Router $router = null
     ) {
         $this->container = $container;
         $this->hooks = $hooks;
@@ -341,9 +341,9 @@ class PluginManager
      * @param string $method HTTP method (GET, POST, PUT, DELETE, PATCH)
      * @param string $path Route path
      * @param callable|array $handler Route handler
-     * @return \Framework\Core\Route|null
+     * @return \ChimeraNoWP\Core\Route|null
      */
-    public function registerRoute(string $method, string $path, callable|array $handler): ?\Framework\Core\Route
+    public function registerRoute(string $method, string $path, callable|array $handler): ?\ChimeraNoWP\Core\Route
     {
         if ($this->router === null) {
             $this->logError('router', 'Router not available for route registration');
@@ -367,9 +367,9 @@ class PluginManager
      * 
      * Allows plugins to access the router for advanced route registration
      * 
-     * @return \Framework\Core\Router|null
+     * @return \ChimeraNoWP\Core\Router|null
      */
-    public function getRouter(): ?\Framework\Core\Router
+    public function getRouter(): ?\ChimeraNoWP\Core\Router
     {
         return $this->router;
     }

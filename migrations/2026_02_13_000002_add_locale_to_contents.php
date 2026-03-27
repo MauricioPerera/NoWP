@@ -6,8 +6,8 @@
  * Requirements: 14.1, 14.2
  */
 
-use Framework\Database\Migration;
-use Framework\Database\Connection;
+use ChimeraNoWP\Database\Migration;
+use ChimeraNoWP\Database\Connection;
 
 return new class extends Migration
 {

@@ -9,10 +9,10 @@
 
 declare(strict_types=1);
 
-namespace Framework\Search;
+namespace ChimeraNoWP\Search;
 
-use Framework\Core\Container;
-use Framework\Plugin\HookSystem;
+use ChimeraNoWP\Core\Container;
+use ChimeraNoWP\Plugin\HookSystem;
 
 class SearchServiceProvider
 {
@@ -75,12 +75,12 @@ class SearchServiceProvider
     /**
      * Register search routes.
      */
-    public static function registerRoutes(\Framework\Core\Router $router, Container $container): void
+    public static function registerRoutes(\ChimeraNoWP\Core\Router $router, Container $container): void
     {
         $router->get('/api/search', function ($request) use ($container) {
             $controller = new SearchController(
                 $container->get(SearchService::class),
-                $container->get(\Framework\Content\ContentRepository::class),
+                $container->get(\ChimeraNoWP\Content\ContentRepository::class),
             );
             return $controller->search($request);
         });
@@ -88,14 +88,14 @@ class SearchServiceProvider
         $router->get('/api/search/stats', function () use ($container) {
             return (new SearchController(
                 $container->get(SearchService::class),
-                $container->get(\Framework\Content\ContentRepository::class),
+                $container->get(\ChimeraNoWP\Content\ContentRepository::class),
             ))->stats();
         });
 
         $router->post('/api/search/reindex', function () use ($container) {
             return (new SearchController(
                 $container->get(SearchService::class),
-                $container->get(\Framework\Content\ContentRepository::class),
+                $container->get(\ChimeraNoWP\Content\ContentRepository::class),
             ))->reindex();
         });
     }

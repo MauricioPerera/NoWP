@@ -26,7 +26,7 @@ return [
     'storage_path' => env('SEARCH_STORAGE_PATH', 'storage/vectors'),
 
     // Embedding provider
-    'provider' => env('SEARCH_PROVIDER', 'ollama'),
+    'provider' => env('SEARCH_PROVIDER', env('EMBEDDING_PROVIDER', 'ollama')),
 
     // Provider-specific settings
     'providers' => [
@@ -36,10 +36,10 @@ return [
             'dimensions' => env('OLLAMA_EMBED_DIMS', 768),
         ],
         'cloudflare' => [
-            'account_id' => env('CLOUDFLARE_ACCOUNT_ID', ''),
-            'api_key'    => env('CLOUDFLARE_AI_API_KEY', ''),
-            'model'      => env('CLOUDFLARE_EMBED_MODEL', '@cf/google/embeddinggemma-300m'),
-            'dimensions' => 768,
+            'account_id' => env('CF_ACCOUNT_ID', env('CLOUDFLARE_ACCOUNT_ID', '')),
+            'api_key'    => env('CF_API_TOKEN', env('CLOUDFLARE_AI_API_KEY', '')),
+            'model'      => env('CF_EMBED_MODEL', '@cf/google/embeddinggemma-300m'),
+            'dimensions' => (int) env('CF_EMBED_DIMS', 768),
         ],
         'openai' => [
             'api_key'    => env('OPENAI_API_KEY', ''),

@@ -9,8 +9,8 @@
 
 declare(strict_types=1);
 
-use Framework\Content\CustomFieldRepository;
-use Framework\Database\Connection;
+use ChimeraNoWP\Content\CustomFieldRepository;
+use ChimeraNoWP\Database\Connection;
 use PDO;
 
 beforeEach(function () {
@@ -44,6 +44,8 @@ beforeEach(function () {
             status VARCHAR(50) NOT NULL,
             author_id INTEGER NOT NULL,
             parent_id INTEGER NULL,
+            locale VARCHAR(10) DEFAULT 'en',
+            translation_group VARCHAR(50) DEFAULT NULL,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             published_at TIMESTAMP NULL

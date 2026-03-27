@@ -1,8 +1,8 @@
 <?php
 
-use Framework\Core\RateLimiter;
-use Framework\Cache\CacheManager;
-use Framework\Cache\FileAdapter;
+use ChimeraNoWP\Core\RateLimiter;
+use ChimeraNoWP\Cache\CacheManager;
+use ChimeraNoWP\Cache\FileAdapter;
 
 beforeEach(function () {
     $adapter = new FileAdapter(__DIR__ . '/../../fixtures/cache');

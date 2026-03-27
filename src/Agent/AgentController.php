@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace Framework\Agent;
+namespace ChimeraNoWP\Agent;
 
-use Framework\Core\Request;
+use ChimeraNoWP\Core\Request;
 
 /**
  * Agent REST API Controller.
@@ -20,7 +20,7 @@ use Framework\Core\Request;
 class AgentController
 {
     public function __construct(
-        private AgentService $agent,
+        private AgentFacade $agent,
     ) {}
 
     /**
@@ -137,7 +137,7 @@ class AgentController
         $tools = $this->agent->listTools();
         $exists = false;
         foreach ($tools as $t) {
-            if ($t['name'] === $toolName) {
+            if (($t['function']['name'] ?? $t['name'] ?? '') === $toolName) {
                 $exists = true;
                 break;
             }
@@ -160,7 +160,7 @@ class AgentController
      */
     public function reset(): array
     {
-        $this->agent->reset();
+        $this->agent->clear();
         return ['reset' => true];
     }
 }

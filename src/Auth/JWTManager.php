@@ -1,6 +1,6 @@
 <?php
 
-namespace Framework\Auth;
+namespace ChimeraNoWP\Auth;
 
 use Firebase\JWT\JWT;
 use Firebase\JWT\Key;
@@ -77,6 +77,7 @@ class JWTManager
     /**
      * Check if a token is expired
      *
+     * @deprecated JWT::decode() already validates expiration
      * @param string $token The JWT token to check
      * @return bool True if the token is expired, false otherwise
      */

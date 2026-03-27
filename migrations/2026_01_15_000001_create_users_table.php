@@ -13,7 +13,7 @@ declare(strict_types=1);
 
 require_once __DIR__ . '/../src/Database/Migration.php';
 
-use Framework\Database\Migration;
+use ChimeraNoWP\Database\Migration;
 
 class CreateUsersTable extends Migration
 {
@@ -33,7 +33,9 @@ class CreateUsersTable extends Migration
                 role VARCHAR(50) NOT NULL,
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 last_login_at TIMESTAMP NULL,
-                INDEX idx_email (email)
+                INDEX idx_email (email),
+                INDEX idx_role (role),
+                INDEX idx_created_at (created_at)
             ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
         ";
         

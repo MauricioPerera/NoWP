@@ -1,6 +1,6 @@
 <?php
 
-use Framework\Install\SystemRequirements;
+use ChimeraNoWP\Install\SystemRequirements;
 
 it('checks PHP version requirement', function () {
     $requirements = new SystemRequirements();

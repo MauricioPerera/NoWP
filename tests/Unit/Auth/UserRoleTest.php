@@ -1,6 +1,6 @@
 <?php
 
-use Framework\Auth\UserRole;
+use ChimeraNoWP\Auth\UserRole;
 
 describe('UserRole', function () {
     it('defines all required roles', function () {

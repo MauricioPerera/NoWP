@@ -11,7 +11,7 @@
 
 declare(strict_types=1);
 
-use Framework\Database\Migration;
+use ChimeraNoWP\Database\Migration;
 
 return new class extends Migration
 {

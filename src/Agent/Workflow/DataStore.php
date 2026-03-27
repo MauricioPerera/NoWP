@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Framework\Agent\Workflow;
+namespace ChimeraNoWP\Agent\Workflow;
 
 /**
  * In-memory data store for workflow execution.

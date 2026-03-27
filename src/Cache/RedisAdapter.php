@@ -10,7 +10,7 @@
 
 declare(strict_types=1);
 
-namespace Framework\Cache;
+namespace ChimeraNoWP\Cache;
 
 use Redis;
 
@@ -48,7 +48,15 @@ class RedisAdapter implements CacheAdapterInterface
             return null;
         }
         
-        return unserialize($value);
+        return unserialize($value, ['allowed_classes' => [
+            \ChimeraNoWP\Content\Content::class,
+            \ChimeraNoWP\Content\ContentType::class,
+            \ChimeraNoWP\Content\ContentStatus::class,
+            \ChimeraNoWP\Content\Media::class,
+            \ChimeraNoWP\Auth\User::class,
+            \ChimeraNoWP\Auth\UserRole::class,
+            \DateTime::class,
+        ]]);
     }
     
     public function set(string $key, mixed $value, int $ttl = 3600): bool

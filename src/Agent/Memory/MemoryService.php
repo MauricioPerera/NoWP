@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace Framework\Agent\Memory;
+namespace ChimeraNoWP\Agent\Memory;
 
-use Framework\Search\SearchService;
+use ChimeraNoWP\Search\SearchService;
 
 /**
  * Agent Memory — persistent semantic memory across sessions.

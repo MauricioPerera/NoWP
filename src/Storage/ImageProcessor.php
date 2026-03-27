@@ -11,7 +11,7 @@
 
 declare(strict_types=1);
 
-namespace Framework\Storage;
+namespace ChimeraNoWP\Storage;
 
 use Intervention\Image\ImageManager;
 use Intervention\Image\Drivers\Gd\Driver;
@@ -120,13 +120,16 @@ class ImageProcessor
         
         $sizes = $sizes ?? $this->defaultSizes;
         $thumbnails = [];
-        
+
+        // Read source image once and clone for each thumbnail
+        $sourceImage = $this->manager->read($path);
+
         foreach ($sizes as $name => $dimensions) {
             $width = $dimensions['width'] ?? 150;
             $height = $dimensions['height'] ?? 150;
-            
-            $image = $this->manager->read($path);
-            
+
+            $image = clone $sourceImage;
+
             // Scale to fit within dimensions while maintaining aspect ratio
             $image->scale(width: $width, height: $height);
             

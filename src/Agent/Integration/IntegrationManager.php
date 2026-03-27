@@ -5,16 +5,16 @@
  *
  * Takes a ServiceDefinition and creates:
  * 1. Stored credential (encrypted in config/env or file)
- * 2. One Tool per endpoint (registered in AgentService)
+ * 2. One Tool per endpoint (registered in AgentFacade)
  * 3. Connection test execution
  */
 
 declare(strict_types=1);
 
-namespace Framework\Agent\Integration;
+namespace ChimeraNoWP\Agent\Integration;
 
-use Framework\Agent\Tools\Tool;
-use Framework\Agent\AgentService;
+use ChimeraNoWP\Agent\Core\ToolDefinition;
+use ChimeraNoWP\Agent\AgentFacade;
 
 class IntegrationManager
 {
@@ -35,7 +35,7 @@ class IntegrationManager
     /**
      * Integrate a service: store definition, create tools, test connection.
      */
-    public function integrate(ServiceDefinition $service, AgentService $agent): array
+    public function integrate(ServiceDefinition $service, AgentFacade $agent): array
     {
         // 1. Store credential
         $this->storeCredential($service);
@@ -43,7 +43,7 @@ class IntegrationManager
         // 2. Create tools for each endpoint
         $tools = $this->createTools($service);
         foreach ($tools as $tool) {
-            $agent->addTool($tool);
+            $agent->tools->register($tool);
         }
 
         // 3. Store service definition
@@ -61,7 +61,7 @@ class IntegrationManager
             'label'     => $service->label,
             'base_url'  => $service->baseUrl,
             'tools'     => count($tools),
-            'endpoints' => array_map(fn($t) => $t->getName(), $tools),
+            'endpoints' => array_map(fn($t) => $t->name, $tools),
             'test'      => $testResult,
             'status'    => 'integrated',
         ];
@@ -107,12 +107,12 @@ class IntegrationManager
     /**
      * Re-register tools for all stored services (called on boot).
      */
-    public function bootTools(AgentService $agent): void
+    public function bootTools(AgentFacade $agent): void
     {
         foreach ($this->services as $service) {
             $tools = $this->createTools($service);
             foreach ($tools as $tool) {
-                $agent->addTool($tool);
+                $agent->tools->register($tool);
             }
         }
     }
@@ -182,18 +182,31 @@ class IntegrationManager
         foreach ($service->endpoints as $ep) {
             $toolName = "{$service->name}_{$ep['name']}";
 
-            $tool = Tool::make($toolName, $ep['description'])
-                ->handler($this->createEndpointHandler($service, $ep));
-
-            // Add query params as tool parameters
+            // Build JSON Schema parameters
+            $properties = [];
+            $required = [];
             foreach ($ep['params'] as $param) {
-                $tool->param($param, 'string', "Query parameter: {$param}");
+                $properties[$param] = ['type' => 'string', 'description' => "Query parameter: {$param}"];
+            }
+            foreach ($ep['body'] as $field) {
+                $properties[$field] = ['type' => 'string', 'description' => "Body field: {$field}"];
+                $required[] = $field;
+            }
+            $parameters = [
+                'type' => 'object',
+                'properties' => $properties,
+            ];
+            if (!empty($required)) {
+                $parameters['required'] = $required;
             }
 
-            // Add body fields as tool parameters
-            foreach ($ep['body'] as $field) {
-                $tool->param($field, 'string', "Body field: {$field}", true);
-            }
+            $tool = new ToolDefinition(
+                $toolName,
+                $ep['description'],
+                $parameters,
+                $this->createEndpointHandler($service, $ep),
+                category: 'integration',
+            );
 
             $tools[] = $tool;
         }

@@ -1,6 +1,6 @@
 <?php
 
-use Framework\Storage\FileManager;
+use ChimeraNoWP\Storage\FileManager;
 
 beforeEach(function () {
     $this->uploadPath = __DIR__ . '/../../fixtures/uploads';

@@ -1,10 +1,10 @@
 <?php
 
-namespace Framework\Auth;
+namespace ChimeraNoWP\Auth;
 
-use Framework\Core\MiddlewareInterface;
-use Framework\Core\Request;
-use Framework\Core\Response;
+use ChimeraNoWP\Core\MiddlewareInterface;
+use ChimeraNoWP\Core\Request;
+use ChimeraNoWP\Core\Response;
 use Exception;
 
 /**
@@ -118,12 +118,15 @@ class AuthMiddleware implements MiddlewareInterface
      */
     private function injectUserData(Request $request, array $payload): void
     {
-        // Store user data in request attributes
+        // Store a proper User object in request attributes
         // This will be accessible via $request->getAttribute('user')
-        $request->setAttribute('user', [
-            'id' => $payload['sub'] ?? null,
-            'email' => $payload['email'] ?? null,
-            'role' => $payload['role'] ?? null,
-        ]);
+        $user = new User(
+            id: (int) ($payload['sub'] ?? 0),
+            email: $payload['email'] ?? '',
+            passwordHash: '',
+            displayName: $payload['name'] ?? $payload['email'] ?? '',
+            role: UserRole::tryFrom($payload['role'] ?? '') ?? UserRole::SUBSCRIBER,
+        );
+        $request->setAttribute('user', $user);
     }
 }

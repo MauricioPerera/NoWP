@@ -18,19 +18,19 @@
 
 declare(strict_types=1);
 
-namespace Framework\Agent\MCP;
+namespace ChimeraNoWP\Agent\MCP;
 
-use Framework\Agent\AgentService;
+use ChimeraNoWP\Agent\AgentFacade;
 
 class MCPServer
 {
     private const PROTOCOL_VERSION = '2025-03-26';
-    private const SERVER_NAME     = 'nowp-mcp';
-    private const SERVER_VERSION  = '0.1.0';
+    private const SERVER_NAME     = 'chimera-nowp-mcp';
+    private const SERVER_VERSION  = '1.0.0';
 
-    private AgentService $agent;
+    private AgentFacade $agent;
 
-    public function __construct(AgentService $agent)
+    public function __construct(AgentFacade $agent)
     {
         $this->agent = $agent;
     }
@@ -115,10 +115,12 @@ class MCPServer
 
         $mcpTools = [];
         foreach ($agentTools as $tool) {
+            // AgentFacade::listTools() returns OpenAI format: {type, function: {name, description, parameters}}
+            $fn = $tool['function'] ?? $tool;
             $mcpTools[] = [
-                'name'        => $tool['name'],
-                'description' => $tool['description'],
-                'inputSchema' => $tool['parameters'] ?? ['type' => 'object', 'properties' => new \stdClass()],
+                'name'        => $fn['name'] ?? '',
+                'description' => $fn['description'] ?? '',
+                'inputSchema' => $fn['parameters'] ?? ['type' => 'object', 'properties' => new \stdClass()],
             ];
         }
 
@@ -157,7 +159,7 @@ class MCPServer
 
     // ── JSON-RPC Helpers ───────────────────────────────────────────
 
-    private function success(?string $id, mixed $result): string
+    private function success(mixed $id, mixed $result): string
     {
         return json_encode([
             'jsonrpc' => '2.0',
@@ -166,7 +168,7 @@ class MCPServer
         ], JSON_UNESCAPED_SLASHES);
     }
 
-    private function error(?string $id, int $code, string $message): string
+    private function error(mixed $id, int $code, string $message): string
     {
         return json_encode([
             'jsonrpc' => '2.0',

@@ -10,13 +10,13 @@
 
 declare(strict_types=1);
 
-namespace Framework\Install;
+namespace ChimeraNoWP\Install;
 
-use Framework\Core\Request;
-use Framework\Core\Response;
-use Framework\Database\Connection;
-use Framework\Database\MigrationRunner;
-use Framework\Auth\PasswordHasher;
+use ChimeraNoWP\Core\Request;
+use ChimeraNoWP\Core\Response;
+use ChimeraNoWP\Database\Connection;
+use ChimeraNoWP\Database\MigrationRunner;
+use ChimeraNoWP\Auth\PasswordHasher;
 use PDO;
 
 class InstallController
@@ -231,20 +231,30 @@ class InstallController
      */
     private function createConfigFile(array $data): void
     {
+        // Sanitize all user-supplied values to prevent .env injection
+        $sanitize = fn(string $value): string => str_replace(["\n", "\r", "\0"], '', $value);
+
+        $dbHost = $sanitize($data['db_host']);
+        $dbPort = $sanitize((string)($data['db_port'] ?? 3306));
+        $dbName = $sanitize($data['db_name']);
+        $dbUser = $sanitize($data['db_user']);
+        $dbPassword = $sanitize($data['db_password'] ?? '');
+        $siteUrl = $sanitize($data['site_url']);
+
         $envContent = <<<ENV
 # Database Configuration
 DB_DRIVER=mysql
-DB_HOST={$data['db_host']}
-DB_PORT={$data['db_port'] ?? 3306}
-DB_DATABASE={$data['db_name']}
-DB_USERNAME={$data['db_user']}
-DB_PASSWORD={$data['db_password'] ?? ''}
+DB_HOST={$dbHost}
+DB_PORT={$dbPort}
+DB_DATABASE={$dbName}
+DB_USERNAME={$dbUser}
+DB_PASSWORD={$dbPassword}
 
 # Application Configuration
 APP_NAME=Framework
 APP_ENV=production
 APP_DEBUG=false
-APP_URL={$data['site_url']}
+APP_URL={$siteUrl}
 
 # JWT Configuration
 JWT_SECRET={$this->generateSecret()}

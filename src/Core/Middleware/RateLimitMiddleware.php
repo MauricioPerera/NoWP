@@ -10,13 +10,13 @@
 
 declare(strict_types=1);
 
-namespace Framework\Core\Middleware;
+namespace ChimeraNoWP\Core\Middleware;
 
-use Framework\Core\MiddlewareInterface;
-use Framework\Core\Request;
-use Framework\Core\Response;
-use Framework\Core\RateLimiter;
-use Framework\Core\Exceptions\RateLimitException;
+use ChimeraNoWP\Core\MiddlewareInterface;
+use ChimeraNoWP\Core\Request;
+use ChimeraNoWP\Core\Response;
+use ChimeraNoWP\Core\RateLimiter;
+use ChimeraNoWP\Core\Exceptions\RateLimitException;
 
 class RateLimitMiddleware implements MiddlewareInterface
 {
@@ -65,10 +65,8 @@ class RateLimitMiddleware implements MiddlewareInterface
      */
     private function resolveRequestKey(Request $request): string
     {
-        // Use IP address as key
-        $ip = $request->getHeader('X-Forwarded-For') 
-            ?? $request->getHeader('Remote-Addr') 
-            ?? 'unknown';
+        // Use REMOTE_ADDR as primary to prevent IP spoofing via headers
+        $ip = $_SERVER['REMOTE_ADDR'] ?? 'unknown';
         
         // Include path for per-endpoint rate limiting
         $path = $request->getPath();

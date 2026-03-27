@@ -10,11 +10,11 @@
 
 declare(strict_types=1);
 
-namespace Framework\Core\Middleware;
+namespace ChimeraNoWP\Core\Middleware;
 
-use Framework\Core\MiddlewareInterface;
-use Framework\Core\Request;
-use Framework\Core\Response;
+use ChimeraNoWP\Core\MiddlewareInterface;
+use ChimeraNoWP\Core\Request;
+use ChimeraNoWP\Core\Response;
 
 class SecurityHeadersMiddleware implements MiddlewareInterface
 {
@@ -63,8 +63,13 @@ class SecurityHeadersMiddleware implements MiddlewareInterface
             // Permissions policy
             'Permissions-Policy' => 'geolocation=(), microphone=(), camera=()',
             
-            // Strict Transport Security (HSTS) - only if HTTPS
-            // 'Strict-Transport-Security' => 'max-age=31536000; includeSubDomains',
+            // Strict Transport Security (HSTS) - enabled when serving over HTTPS
+            'Strict-Transport-Security' => 'max-age=31536000; includeSubDomains',
         ];
+
+        // Only include HSTS if connection is actually HTTPS
+        if (empty($_SERVER['HTTPS']) || $_SERVER['HTTPS'] === 'off') {
+            unset($headers['Strict-Transport-Security']);
+        }
     }
 }

@@ -11,10 +11,10 @@
 
 declare(strict_types=1);
 
-namespace Framework\Core;
+namespace ChimeraNoWP\Core;
 
-use Framework\Core\Exceptions\HttpException;
-use Framework\Core\Exceptions\ServerException;
+use ChimeraNoWP\Core\Exceptions\HttpException;
+use ChimeraNoWP\Core\Exceptions\ServerException;
 use Throwable;
 
 class ExceptionHandler
@@ -201,6 +201,10 @@ class ExceptionHandler
      */
     public function register(): void
     {
-        set_exception_handler([$this, 'handle']);
+        set_exception_handler(function (Throwable $e): void {
+            $response = $this->handle($e);
+            $response->send();
+            exit;
+        });
     }
 }

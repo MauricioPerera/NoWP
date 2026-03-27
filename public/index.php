@@ -1,7 +1,7 @@
 <?php
 
 /**
- * WordPress Alternative Framework
+ * Chimera NoWP — Agentic CMS
  * Entry point for all requests
  */
 
@@ -18,11 +18,11 @@ require BASE_PATH . '/vendor/autoload.php';
 $config = require BASE_PATH . '/config/app.php';
 
 // Bootstrap and run application
-$app = new Framework\Core\Application($config);
+$app = new ChimeraNoWP\Core\Application($config);
 $app->boot();
 
 // Handle the request
-$request = Framework\Core\Request::createFromGlobals();
+$request = ChimeraNoWP\Core\Request::createFromGlobals();
 $response = $app->handle($request);
 
 // Send response

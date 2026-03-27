@@ -8,10 +8,10 @@
 
 declare(strict_types=1);
 
-use Framework\Plugin\PluginManager;
-use Framework\Plugin\HookSystem;
-use Framework\Core\Container;
-use Framework\Core\Router;
+use ChimeraNoWP\Plugin\PluginManager;
+use ChimeraNoWP\Plugin\HookSystem;
+use ChimeraNoWP\Core\Container;
+use ChimeraNoWP\Core\Router;
 
 // Load the example plugin
 require_once __DIR__ . '/../../../plugins/example-plugin/example-plugin.php';

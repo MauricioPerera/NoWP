@@ -5,7 +5,7 @@
  */
 
 spl_autoload_register(function ($class) {
-    $prefix = 'Framework\\';
+    $prefix = 'ChimeraNoWP\\';
     $baseDir = __DIR__ . '/../src/';
     $len = strlen($prefix);
     if (strncmp($prefix, $class, $len) !== 0) return;
@@ -14,11 +14,11 @@ spl_autoload_register(function ($class) {
     if (file_exists($file)) require $file;
 });
 
-use Framework\Agent\Data\EntitySchema;
-use Framework\Agent\Data\EntityMaterializer;
-use Framework\Agent\Workflow\WorkflowEngine;
-use Framework\Agent\Testing\TestRunner;
-use Framework\Database\Connection;
+use ChimeraNoWP\Agent\Data\EntitySchema;
+use ChimeraNoWP\Agent\Data\EntityMaterializer;
+use ChimeraNoWP\Agent\Workflow\WorkflowEngine;
+use ChimeraNoWP\Agent\Testing\TestRunner;
+use ChimeraNoWP\Database\Connection;
 
 echo "A2T Integration Test\n";
 echo "====================\n\n";

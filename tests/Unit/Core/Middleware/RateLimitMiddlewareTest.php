@@ -1,12 +1,12 @@
 <?php
 
-use Framework\Core\Middleware\RateLimitMiddleware;
-use Framework\Core\Request;
-use Framework\Core\Response;
-use Framework\Core\RateLimiter;
-use Framework\Core\Exceptions\RateLimitException;
-use Framework\Cache\CacheManager;
-use Framework\Cache\FileAdapter;
+use ChimeraNoWP\Core\Middleware\RateLimitMiddleware;
+use ChimeraNoWP\Core\Request;
+use ChimeraNoWP\Core\Response;
+use ChimeraNoWP\Core\RateLimiter;
+use ChimeraNoWP\Core\Exceptions\RateLimitException;
+use ChimeraNoWP\Cache\CacheManager;
+use ChimeraNoWP\Cache\FileAdapter;
 
 beforeEach(function () {
     $adapter = new FileAdapter(__DIR__ . '/../../../fixtures/cache');

@@ -1,9 +1,9 @@
 <?php
 
-use Framework\Core\Middleware\CSRFMiddleware;
-use Framework\Core\Request;
-use Framework\Core\Response;
-use Framework\Core\Exceptions\AuthorizationException;
+use ChimeraNoWP\Core\Middleware\CSRFMiddleware;
+use ChimeraNoWP\Core\Request;
+use ChimeraNoWP\Core\Response;
+use ChimeraNoWP\Core\Exceptions\AuthorizationException;
 
 it('allows GET requests without CSRF token', function () {
     $middleware = new CSRFMiddleware();

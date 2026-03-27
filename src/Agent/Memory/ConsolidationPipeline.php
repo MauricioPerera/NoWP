@@ -2,9 +2,10 @@
 
 declare(strict_types=1);
 
-namespace Framework\Agent\Memory;
+namespace ChimeraNoWP\Agent\Memory;
 
-use Framework\Agent\Provider\AIProviderInterface;
+use ChimeraNoWP\Agent\LLM\Message;
+use ChimeraNoWP\Agent\LLM\ProviderInterface;
 
 /**
  * Consolidation Pipeline — merges duplicate/related memories and skills.
@@ -14,7 +15,7 @@ use Framework\Agent\Provider\AIProviderInterface;
  */
 class ConsolidationPipeline
 {
-    private AIProviderInterface $provider;
+    private ProviderInterface $provider;
     private MemoryService $memory;
 
     private const CHUNK_SIZE = 20;
@@ -45,7 +46,7 @@ Rules:
 Items:
 PROMPT;
 
-    public function __construct(AIProviderInterface $provider, MemoryService $memory)
+    public function __construct(ProviderInterface $provider, MemoryService $memory)
     {
         $this->provider = $provider;
         $this->memory = $memory;
@@ -149,13 +150,13 @@ PROMPT;
 
         $prompt = self::CONSOLIDATION_PROMPT . "\n" . $serialized;
 
-        $response = $this->provider->chat(
-            [['role' => 'user', 'content' => $prompt]],
-            'You consolidate items by merging duplicates and removing obsolete entries. Return only valid JSON.',
-            [],
-        );
+        $msgObjects = [
+            new Message('system', 'You consolidate items by merging duplicates and removing obsolete entries. Return only valid JSON.'),
+            new Message('user', $prompt),
+        ];
+        $response = $this->provider->chat($msgObjects, []);
 
-        $plan = $this->parseJson($response['content'] ?? '');
+        $plan = $this->parseJson($response->content ?? '');
         if (!$plan) {
             return ['merged' => 0, 'removed' => 0, 'kept' => count($items)];
         }

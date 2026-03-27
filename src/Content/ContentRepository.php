@@ -11,10 +11,10 @@
 
 declare(strict_types=1);
 
-namespace Framework\Content;
+namespace ChimeraNoWP\Content;
 
-use Framework\Database\QueryBuilder;
-use Framework\Database\Connection;
+use ChimeraNoWP\Database\QueryBuilder;
+use ChimeraNoWP\Database\Connection;
 use DateTime;
 
 class ContentRepository
@@ -214,7 +214,15 @@ class ContentRepository
         if (isset($data['published_at'])) {
             $updateData['published_at'] = $data['published_at'];
         }
-        
+
+        if (isset($data['locale'])) {
+            $updateData['locale'] = $data['locale'];
+        }
+
+        if (isset($data['translation_group'])) {
+            $updateData['translation_group'] = $data['translation_group'];
+        }
+
         $updateData['updated_at'] = (new DateTime())->format('Y-m-d H:i:s');
         
         $this->newQuery()

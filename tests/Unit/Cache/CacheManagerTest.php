@@ -1,9 +1,9 @@
 <?php
 
-use Framework\Cache\CacheManager;
-use Framework\Cache\NullCacheAdapter;
-use Framework\Cache\FileAdapter;
-use Framework\Cache\APCuAdapter;
+use ChimeraNoWP\Cache\CacheManager;
+use ChimeraNoWP\Cache\NullCacheAdapter;
+use ChimeraNoWP\Cache\FileAdapter;
+use ChimeraNoWP\Cache\APCuAdapter;
 
 beforeEach(function () {
     $this->cachePath = BASE_PATH . '/storage/cache/test';
@@ -105,7 +105,7 @@ it('auto-detects file adapter when no cache system available', function () {
     $adapter = $manager->getAdapter();
     
     // Should detect and use an available adapter
-    expect($adapter)->toBeInstanceOf(\Framework\Cache\CacheAdapterInterface::class);
+    expect($adapter)->toBeInstanceOf(\ChimeraNoWP\Cache\CacheAdapterInterface::class);
 });
 
 it('uses provided adapter instead of auto-detection', function () {

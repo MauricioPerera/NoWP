@@ -9,10 +9,10 @@
 
 declare(strict_types=1);
 
-use Framework\Plugin\PluginManager;
-use Framework\Plugin\PluginInterface;
-use Framework\Plugin\HookSystem;
-use Framework\Core\Container;
+use ChimeraNoWP\Plugin\PluginManager;
+use ChimeraNoWP\Plugin\PluginInterface;
+use ChimeraNoWP\Plugin\HookSystem;
+use ChimeraNoWP\Core\Container;
 
 beforeEach(function () {
     $this->container = new Container();
@@ -387,7 +387,7 @@ it('handles deactivation errors gracefully', function () {
 // Tests for plugin route registration
 
 it('registers custom routes for plugins', function () {
-    $router = new Framework\Core\Router();
+    $router = new ChimeraNoWP\Core\Router();
     $manager = new PluginManager(
         $this->container,
         $this->hooks,
@@ -399,14 +399,14 @@ it('registers custom routes for plugins', function () {
         return 'custom response';
     });
     
-    expect($route)->toBeInstanceOf(Framework\Core\Route::class);
+    expect($route)->toBeInstanceOf(ChimeraNoWP\Core\Route::class);
     
     $routes = $router->getRoutes();
     expect($routes)->toHaveCount(1);
 });
 
 it('supports all HTTP methods for route registration', function () {
-    $router = new Framework\Core\Router();
+    $router = new ChimeraNoWP\Core\Router();
     $manager = new PluginManager(
         $this->container,
         $this->hooks,
@@ -437,7 +437,7 @@ it('returns null when registering route without router', function () {
 });
 
 it('returns null for unsupported HTTP method', function () {
-    $router = new Framework\Core\Router();
+    $router = new ChimeraNoWP\Core\Router();
     $manager = new PluginManager(
         $this->container,
         $this->hooks,
@@ -451,7 +451,7 @@ it('returns null for unsupported HTTP method', function () {
 });
 
 it('provides router access to plugins', function () {
-    $router = new Framework\Core\Router();
+    $router = new ChimeraNoWP\Core\Router();
     $manager = new PluginManager(
         $this->container,
         $this->hooks,
@@ -477,7 +477,7 @@ it('returns null when no router is configured', function () {
 });
 
 it('allows plugins to register routes during activation', function () {
-    $router = new Framework\Core\Router();
+    $router = new ChimeraNoWP\Core\Router();
     $manager = new PluginManager(
         $this->container,
         $this->hooks,

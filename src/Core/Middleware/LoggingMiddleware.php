@@ -1,10 +1,10 @@
 <?php
 
-namespace Framework\Core\Middleware;
+namespace ChimeraNoWP\Core\Middleware;
 
-use Framework\Core\MiddlewareInterface;
-use Framework\Core\Request;
-use Framework\Core\Response;
+use ChimeraNoWP\Core\MiddlewareInterface;
+use ChimeraNoWP\Core\Request;
+use ChimeraNoWP\Core\Response;
 
 /**
  * Logging Middleware

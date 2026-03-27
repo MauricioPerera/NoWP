@@ -10,9 +10,9 @@
 
 declare(strict_types=1);
 
-namespace Framework\Backup;
+namespace ChimeraNoWP\Backup;
 
-use Framework\Database\Connection;
+use ChimeraNoWP\Database\Connection;
 use ZipArchive;
 
 class RestoreCommand
@@ -167,13 +167,10 @@ class RestoreCommand
         }
         
         $sql = file_get_contents($sqlFile);
-        
-        // Split into individual statements
-        $statements = array_filter(
-            array_map('trim', explode(';', $sql)),
-            fn($stmt) => !empty($stmt) && !str_starts_with($stmt, '--')
-        );
-        
+
+        // Split into individual statements (respecting quoted strings)
+        $statements = $this->splitSqlStatements($sql);
+
         // Execute each statement
         foreach ($statements as $statement) {
             if (!empty($statement)) {
@@ -259,6 +256,53 @@ class RestoreCommand
         }
     }
     
+    /**
+     * Split SQL into individual statements, respecting quoted strings.
+     *
+     * @param string $sql
+     * @return array
+     */
+    private function splitSqlStatements(string $sql): array
+    {
+        $statements = [];
+        $current = '';
+        $inString = false;
+        $stringChar = '';
+        $len = strlen($sql);
+
+        for ($i = 0; $i < $len; $i++) {
+            $char = $sql[$i];
+
+            if ($inString) {
+                $current .= $char;
+                if ($char === '\\' && $i + 1 < $len) {
+                    $current .= $sql[++$i];
+                } elseif ($char === $stringChar) {
+                    $inString = false;
+                }
+            } elseif ($char === '\'' || $char === '"') {
+                $inString = true;
+                $stringChar = $char;
+                $current .= $char;
+            } elseif ($char === ';') {
+                $trimmed = trim($current);
+                if ($trimmed !== '' && !str_starts_with($trimmed, '--')) {
+                    $statements[] = $trimmed;
+                }
+                $current = '';
+            } else {
+                $current .= $char;
+            }
+        }
+
+        $trimmed = trim($current);
+        if ($trimmed !== '' && !str_starts_with($trimmed, '--')) {
+            $statements[] = $trimmed;
+        }
+
+        return $statements;
+    }
+
     /**
      * Remove directory recursively
      *

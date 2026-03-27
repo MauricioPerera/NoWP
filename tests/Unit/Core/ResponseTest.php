@@ -1,6 +1,6 @@
 <?php
 
-use Framework\Core\Response;
+use ChimeraNoWP\Core\Response;
 
 // Constructor tests
 test('creates response with default values', function () {

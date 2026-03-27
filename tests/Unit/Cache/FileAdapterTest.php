@@ -1,6 +1,6 @@
 <?php
 
-use Framework\Cache\FileAdapter;
+use ChimeraNoWP\Cache\FileAdapter;
 
 beforeEach(function () {
     $this->cachePath = BASE_PATH . '/storage/cache/test';

@@ -1,10 +1,10 @@
 <?php
 
-use Framework\Core\Application;
-use Framework\Core\Request;
-use Framework\Core\Router;
-use Framework\Core\Exceptions\NotFoundException;
-use Framework\Core\Exceptions\ValidationException;
+use ChimeraNoWP\Core\Application;
+use ChimeraNoWP\Core\Request;
+use ChimeraNoWP\Core\Router;
+use ChimeraNoWP\Core\Exceptions\NotFoundException;
+use ChimeraNoWP\Core\Exceptions\ValidationException;
 
 beforeEach(function () {
     $this->app = new Application([
@@ -139,9 +139,9 @@ it('handles exceptions in middleware', function () {
     $router = $this->app->getContainer()->resolve(Router::class);
     
     $router->get('/middleware-error', function () {
-        return new \Framework\Core\Response('Success', 200);
+        return new \ChimeraNoWP\Core\Response('Success', 200);
     })->middleware(function ($request, $next) {
-        throw new \Framework\Core\Exceptions\AuthenticationException('Token required');
+        throw new \ChimeraNoWP\Core\Exceptions\AuthenticationException('Token required');
     });
     
     $request = new Request('GET', '/middleware-error');

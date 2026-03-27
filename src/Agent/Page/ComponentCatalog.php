@@ -13,7 +13,7 @@
 
 declare(strict_types=1);
 
-namespace Framework\Agent\Page;
+namespace ChimeraNoWP\Agent\Page;
 
 class ComponentCatalog
 {

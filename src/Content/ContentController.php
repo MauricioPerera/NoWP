@@ -11,10 +11,10 @@
 
 declare(strict_types=1);
 
-namespace Framework\Content;
+namespace ChimeraNoWP\Content;
 
-use Framework\Core\Request;
-use Framework\Core\Response;
+use ChimeraNoWP\Core\Request;
+use ChimeraNoWP\Core\Response;
 
 class ContentController
 {
@@ -37,13 +37,20 @@ class ContentController
     public function index(Request $request): Response
     {
         try {
+            // Validate order_by against whitelist to prevent SQL injection
+            $allowedOrderColumns = ['id', 'title', 'slug', 'created_at', 'updated_at', 'published_at', 'type', 'status'];
+            $orderBy = $request->query('order_by', 'created_at');
+            if (!in_array($orderBy, $allowedOrderColumns)) {
+                $orderBy = 'created_at';
+            }
+
             $filters = [
                 'type' => $request->query('type'),
                 'status' => $request->query('status'),
                 'author_id' => $request->query('author_id'),
                 'limit' => $request->query('limit', 20),
                 'offset' => $request->query('offset', 0),
-                'order_by' => $request->query('order_by', 'created_at'),
+                'order_by' => $orderBy,
                 'order_direction' => $request->query('order_direction', 'desc'),
             ];
             
@@ -81,12 +88,12 @@ class ContentController
             
             if (!$content) {
                 return Response::error(
-                    "Content with ID {$id} not found",
+                    'Content not found',
                     'CONTENT_NOT_FOUND',
                     404
                 );
             }
-            
+
             return Response::success($content->toArray(), 'Content retrieved successfully');
         } catch (\Exception $e) {
             return Response::error(
@@ -134,7 +141,7 @@ class ContentController
             if (empty($data['author_id'])) {
                 $user = $request->user();
                 if ($user) {
-                    $data['author_id'] = $user['id'];
+                    $data['author_id'] = $user->id;
                 } else {
                     return Response::error(
                         'Author ID is required',
@@ -236,7 +243,7 @@ class ContentController
             
             if (!$deleted) {
                 return Response::error(
-                    "Content with ID {$id} not found",
+                    'Content not found',
                     'CONTENT_NOT_FOUND',
                     404
                 );
@@ -278,7 +285,7 @@ class ContentController
             
             if (!$content) {
                 return Response::error(
-                    "Content with slug '{$slug}' not found",
+                    'Content not found',
                     'CONTENT_NOT_FOUND',
                     404
                 );

@@ -10,14 +10,15 @@
 
 declare(strict_types=1);
 
-namespace Framework\Core;
+namespace ChimeraNoWP\Core;
 
-use Framework\Cache\CacheManager;
+use ChimeraNoWP\Cache\CacheManager;
 
 class RateLimiter
 {
     private CacheManager $cache;
     private string $prefix = 'rate_limit:';
+    private array $trackedKeys = [];
     
     public function __construct(CacheManager $cache)
     {
@@ -54,7 +55,8 @@ class RateLimiter
         $attempts++;
         
         $this->cache->set($cacheKey, $attempts, $decaySeconds);
-        
+        $this->trackedKeys[$cacheKey] = true;
+
         return $attempts;
     }
     
@@ -111,7 +113,10 @@ class RateLimiter
      */
     public function clear(): void
     {
-        // Note: This would require cache adapter support for prefix-based deletion
-        // For now, individual keys must be cleared using resetAttempts()
+        // Track rate limit keys and clear them
+        foreach ($this->trackedKeys as $key) {
+            $this->cache->invalidate($key);
+        }
+        $this->trackedKeys = [];
     }
 }

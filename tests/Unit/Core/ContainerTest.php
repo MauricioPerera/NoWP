@@ -1,7 +1,7 @@
 <?php
 
-use Framework\Core\Container;
-use Framework\Core\ContainerException;
+use ChimeraNoWP\Core\Container;
+use ChimeraNoWP\Core\ContainerException;
 
 // Test classes for dependency injection
 class SimpleClass

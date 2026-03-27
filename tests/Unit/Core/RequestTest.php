@@ -1,6 +1,6 @@
 <?php
 
-use Framework\Core\Request;
+use ChimeraNoWP\Core\Request;
 
 // Constructor tests
 test('creates request with basic parameters', function () {

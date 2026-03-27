@@ -8,19 +8,19 @@
 
 declare(strict_types=1);
 
-use Framework\Content\ContentController;
-use Framework\Content\ContentService;
-use Framework\Content\ContentRepository;
-use Framework\Content\CustomFieldRepository;
-use Framework\Content\Content;
-use Framework\Content\ContentType;
-use Framework\Content\ContentStatus;
-use Framework\Core\Request;
-use Framework\Core\Response;
-use Framework\Plugin\HookSystem;
-use Framework\Cache\CacheManager;
-use Framework\Cache\NullCacheAdapter;
-use Framework\Database\Connection;
+use ChimeraNoWP\Content\ContentController;
+use ChimeraNoWP\Content\ContentService;
+use ChimeraNoWP\Content\ContentRepository;
+use ChimeraNoWP\Content\CustomFieldRepository;
+use ChimeraNoWP\Content\Content;
+use ChimeraNoWP\Content\ContentType;
+use ChimeraNoWP\Content\ContentStatus;
+use ChimeraNoWP\Core\Request;
+use ChimeraNoWP\Core\Response;
+use ChimeraNoWP\Plugin\HookSystem;
+use ChimeraNoWP\Cache\CacheManager;
+use ChimeraNoWP\Cache\NullCacheAdapter;
+use ChimeraNoWP\Database\Connection;
 use PDO;
 
 beforeEach(function () {
@@ -54,12 +54,14 @@ beforeEach(function () {
             status VARCHAR(50) NOT NULL,
             author_id INTEGER NOT NULL,
             parent_id INTEGER NULL,
+            locale VARCHAR(10) DEFAULT 'en',
+            translation_group VARCHAR(50) DEFAULT NULL,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             published_at TIMESTAMP NULL
         )
     ");
-    
+
     $this->connection->getPdo()->exec("
         CREATE TABLE content_versions (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -70,6 +72,8 @@ beforeEach(function () {
             type VARCHAR(50) NOT NULL,
             status VARCHAR(50) NOT NULL,
             author_id INTEGER NOT NULL,
+            locale VARCHAR(10) DEFAULT 'en',
+            translation_group VARCHAR(50) DEFAULT NULL,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             FOREIGN KEY (content_id) REFERENCES contents(id) ON DELETE CASCADE
         )
@@ -222,8 +226,14 @@ it('uses authenticated user as author if not provided', function () {
         'type' => 'post'
     ]);
     
-    // Set authenticated user
-    $request->setAttribute('user', ['id' => 42, 'email' => 'test@example.com']);
+    // Set authenticated user as User object
+    $request->setAttribute('user', new \ChimeraNoWP\Auth\User(
+        id: 42,
+        email: 'test@example.com',
+        passwordHash: '',
+        displayName: 'Test User',
+        role: \ChimeraNoWP\Auth\UserRole::EDITOR
+    ));
     
     $response = $this->controller->store($request);
     

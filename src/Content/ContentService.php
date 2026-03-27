@@ -11,11 +11,11 @@
 
 declare(strict_types=1);
 
-namespace Framework\Content;
+namespace ChimeraNoWP\Content;
 
-use Framework\Plugin\HookSystem;
-use Framework\Cache\CacheManager;
-use Framework\Database\Connection;
+use ChimeraNoWP\Plugin\HookSystem;
+use ChimeraNoWP\Cache\CacheManager;
+use ChimeraNoWP\Database\Connection;
 use DateTime;
 
 class ContentService
@@ -111,36 +111,38 @@ class ContentService
     {
         // Validate required fields
         $this->validateContentData($data);
-        
+
         // Apply filter hook to allow plugins to modify data before creation
         $data = $this->hooks->applyFilters('content.before_create', $data);
-        
+
         // Generate slug if not provided
         if (!isset($data['slug'])) {
             $data['slug'] = $this->generateSlug($data['title']);
         }
-        
+
         // Ensure slug is unique
         $data['slug'] = $this->ensureUniqueSlug($data['slug']);
-        
-        // Create content
-        $content = $this->repository->create($data);
-        
-        // Save custom fields if provided
-        if (isset($data['custom_fields']) && is_array($data['custom_fields'])) {
-            $this->customFieldRepository->setFields($content->id, $data['custom_fields']);
-        }
-        
-        // Create initial version
-        $this->createVersion($content);
-        
-        // Fire action hook
-        $this->hooks->doAction('content.created', $content);
-        
-        // Invalidate related caches
-        $this->invalidateContentCache($content->id);
-        
-        return $content;
+
+        return $this->connection->transaction(function () use ($data) {
+            // Create content
+            $content = $this->repository->create($data);
+
+            // Save custom fields if provided
+            if (isset($data['custom_fields']) && is_array($data['custom_fields'])) {
+                $this->customFieldRepository->setFields($content->id, $data['custom_fields']);
+            }
+
+            // Create initial version
+            $this->createVersion($content);
+
+            // Fire action hook
+            $this->hooks->doAction('content.created', $content);
+
+            // Invalidate related caches
+            $this->invalidateContentCache($content->id);
+
+            return $content;
+        });
     }
     
     /**
@@ -154,41 +156,43 @@ class ContentService
     public function updateContent(int $id, array $data): Content
     {
         $existingContent = $this->repository->find($id);
-        
+
         if (!$existingContent) {
             throw new \RuntimeException("Content with ID {$id} not found");
         }
-        
+
         // Apply filter hook
         $data = $this->hooks->applyFilters('content.before_update', $data, $existingContent);
-        
+
         // If slug is being changed, ensure it's unique
         if (isset($data['slug']) && $data['slug'] !== $existingContent->slug) {
             $data['slug'] = $this->ensureUniqueSlug($data['slug'], $id);
         }
-        
-        // Update content
-        $content = $this->repository->update($id, $data);
-        
-        // Update custom fields if provided
-        if (isset($data['custom_fields']) && is_array($data['custom_fields'])) {
-            $this->customFieldRepository->setFields($id, $data['custom_fields']);
-        }
-        
-        // Create new version
-        $this->createVersion($content);
-        
-        // Fire action hook
-        $this->hooks->doAction('content.updated', $content, $existingContent);
-        
-        // Invalidate caches
-        $this->invalidateContentCache($id);
-        $this->cache->invalidate("content:slug:{$existingContent->slug}");
-        if (isset($data['slug']) && $data['slug'] !== $existingContent->slug) {
-            $this->cache->invalidate("content:slug:{$data['slug']}");
-        }
-        
-        return $content;
+
+        return $this->connection->transaction(function () use ($id, $data, $existingContent) {
+            // Update content
+            $content = $this->repository->update($id, $data);
+
+            // Update custom fields if provided
+            if (isset($data['custom_fields']) && is_array($data['custom_fields'])) {
+                $this->customFieldRepository->setFields($id, $data['custom_fields']);
+            }
+
+            // Create new version
+            $this->createVersion($content);
+
+            // Fire action hook
+            $this->hooks->doAction('content.updated', $content, $existingContent);
+
+            // Invalidate caches
+            $this->invalidateContentCache($id);
+            $this->cache->invalidate("content:slug:{$existingContent->slug}");
+            if (isset($data['slug']) && $data['slug'] !== $existingContent->slug) {
+                $this->cache->invalidate("content:slug:{$data['slug']}");
+            }
+
+            return $content;
+        });
     }
     
     /**
@@ -200,37 +204,39 @@ class ContentService
     public function deleteContent(int $id): bool
     {
         $content = $this->repository->find($id);
-        
+
         if (!$content) {
             return false;
         }
-        
+
         // Apply filter hook to allow plugins to prevent deletion
         $canDelete = $this->hooks->applyFilters('content.can_delete', true, $content);
-        
+
         if (!$canDelete) {
             throw new \RuntimeException("Content deletion prevented by plugin");
         }
-        
-        // Delete versions
-        $this->deleteVersions($id);
-        
-        // Delete custom fields
-        $this->customFieldRepository->deleteAllFields($id);
-        
-        // Delete content
-        $deleted = $this->repository->delete($id);
-        
-        if ($deleted) {
-            // Fire action hook
-            $this->hooks->doAction('content.deleted', $content);
-            
-            // Invalidate caches
-            $this->invalidateContentCache($id);
-            $this->cache->invalidate("content:slug:{$content->slug}");
-        }
-        
-        return $deleted;
+
+        return $this->connection->transaction(function () use ($id, $content) {
+            // Delete versions
+            $this->deleteVersions($id);
+
+            // Delete custom fields
+            $this->customFieldRepository->deleteAllFields($id);
+
+            // Delete content
+            $deleted = $this->repository->delete($id);
+
+            if ($deleted) {
+                // Fire action hook
+                $this->hooks->doAction('content.deleted', $content);
+
+                // Invalidate caches
+                $this->invalidateContentCache($id);
+                $this->cache->invalidate("content:slug:{$content->slug}");
+            }
+
+            return $deleted;
+        });
     }
     
     /**
@@ -270,6 +276,8 @@ class ContentService
             'title' => $version['title'],
             'content' => $version['content'],
             'status' => $version['status'],
+            'slug' => $version['slug'],
+            'type' => $version['type'],
         ];
         
         return $this->updateContent($contentId, $data);
@@ -397,19 +405,32 @@ class ContentService
      */
     private function ensureUniqueSlug(string $slug, ?int $excludeId = null): string
     {
-        $originalSlug = $slug;
-        $counter = 1;
-        
-        while (true) {
-            $existing = $this->repository->findBySlug($slug);
-            
-            if (!$existing || ($excludeId && $existing->id === $excludeId)) {
-                return $slug;
-            }
-            
-            $slug = $originalSlug . '-' . $counter;
-            $counter++;
+        $baseSlug = $slug;
+        $query = "SELECT slug FROM contents WHERE (slug = ? OR slug LIKE ?)";
+        $bindings = [$slug, $baseSlug . '-%'];
+        if ($excludeId !== null) {
+            $query .= " AND id != ?";
+            $bindings[] = $excludeId;
         }
+
+        $existingSlugs = array_column(
+            $this->connection->fetchAll($query, $bindings),
+            'slug'
+        );
+
+        if (empty($existingSlugs) || !in_array($slug, $existingSlugs)) {
+            return $slug;
+        }
+
+        $counter = 1;
+        while (in_array($baseSlug . '-' . $counter, $existingSlugs)) {
+            $counter++;
+            if ($counter > 1000) {
+                break; // safety cap
+            }
+        }
+
+        return $baseSlug . '-' . $counter;
     }
     
     /**

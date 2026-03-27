@@ -1,6 +1,6 @@
 <?php
 
-use Framework\Cache\APCuAdapter;
+use ChimeraNoWP\Cache\APCuAdapter;
 
 beforeEach(function () {
     if (!APCuAdapter::isAvailable()) {

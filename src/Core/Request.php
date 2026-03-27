@@ -1,6 +1,8 @@
 <?php
 
-namespace Framework\Core;
+declare(strict_types=1);
+
+namespace ChimeraNoWP\Core;
 
 /**
  * HTTP Request Class
@@ -36,6 +38,11 @@ class Request
      * @var array<string, mixed>
      */
     private array $body;
+
+    /**
+     * Raw input body captured from php://input
+     */
+    private ?string $rawInput = null;
 
     /**
      * Server variables
@@ -101,20 +108,22 @@ class Request
         // Get headers
         $headers = self::getHeadersFromServer($_SERVER);
         
+        // Capture raw input before it's consumed
+        $rawBody = file_get_contents('php://input') ?: '';
+
         // Get request body for POST/PUT/PATCH
         $body = [];
         if (in_array($method, ['POST', 'PUT', 'PATCH', 'DELETE'])) {
             $contentType = $headers['Content-Type'] ?? '';
-            
+
             if (str_contains($contentType, 'application/json')) {
-                $json = file_get_contents('php://input');
-                $body = json_decode($json, true) ?? [];
+                $body = json_decode($rawBody, true) ?? [];
             } else {
                 $body = $_POST;
             }
         }
-        
-        return new self(
+
+        $request = new self(
             $method,
             $path,
             $headers,
@@ -123,6 +132,9 @@ class Request
             $_SERVER,
             $_FILES
         );
+        $request->rawInput = $rawBody;
+
+        return $request;
     }
 
     /**
@@ -262,7 +274,7 @@ class Request
      */
     public function rawBody(): string
     {
-        return file_get_contents('php://input') ?: json_encode($this->body);
+        return $this->rawInput ?? json_encode($this->body);
     }
 
     /**
@@ -274,8 +286,21 @@ class Request
     }
 
     /**
+     * Return a clone of this request with a replaced body.
+     *
+     * @param array<string, mixed> $body
+     * @return self
+     */
+    public function withBody(array $body): self
+    {
+        $clone = clone $this;
+        $clone->body = $body;
+        return $clone;
+    }
+
+    /**
      * Get all input (query + body)
-     * 
+     *
      * @return array<string, mixed>
      */
     public function all(): array
@@ -376,10 +401,10 @@ class Request
 
     /**
      * Get authenticated user data (convenience method)
-     * 
-     * @return array|null
+     *
+     * @return \ChimeraNoWP\Auth\User|array|null
      */
-    public function user(): ?array
+    public function user(): mixed
     {
         return $this->getAttribute('user');
     }

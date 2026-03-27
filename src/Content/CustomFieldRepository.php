@@ -11,10 +11,10 @@
 
 declare(strict_types=1);
 
-namespace Framework\Content;
+namespace ChimeraNoWP\Content;
 
-use Framework\Database\Connection;
-use Framework\Database\QueryBuilder;
+use ChimeraNoWP\Database\Connection;
+use ChimeraNoWP\Database\QueryBuilder;
 
 class CustomFieldRepository
 {

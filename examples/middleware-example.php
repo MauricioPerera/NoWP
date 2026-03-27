@@ -8,12 +8,12 @@
 
 require_once __DIR__ . '/../vendor/autoload.php';
 
-use Framework\Core\Application;
-use Framework\Core\Container;
-use Framework\Core\MiddlewareInterface;
-use Framework\Core\Request;
-use Framework\Core\Response;
-use Framework\Core\Router;
+use ChimeraNoWP\Core\Application;
+use ChimeraNoWP\Core\Container;
+use ChimeraNoWP\Core\MiddlewareInterface;
+use ChimeraNoWP\Core\Request;
+use ChimeraNoWP\Core\Response;
+use ChimeraNoWP\Core\Router;
 
 // Create application
 $config = [

@@ -2,9 +2,10 @@
 
 declare(strict_types=1);
 
-namespace Framework\Agent\Memory;
+namespace ChimeraNoWP\Agent\Memory;
 
-use Framework\Agent\Provider\AIProviderInterface;
+use ChimeraNoWP\Agent\LLM\Message;
+use ChimeraNoWP\Agent\LLM\ProviderInterface;
 
 /**
  * Mining Pipeline — extracts memories, skills, and profile updates from sessions.
@@ -16,7 +17,7 @@ use Framework\Agent\Provider\AIProviderInterface;
  */
 class MiningPipeline
 {
-    private AIProviderInterface $provider;
+    private ProviderInterface $provider;
     private MemoryService $memory;
     private int $maxSessionChars;
 
@@ -49,7 +50,7 @@ Conversation:
 PROMPT;
 
     public function __construct(
-        AIProviderInterface $provider,
+        ProviderInterface $provider,
         MemoryService $memory,
         int $maxSessionChars = 100000,
     ) {
@@ -72,13 +73,13 @@ PROMPT;
         $prompt = self::EXTRACTION_PROMPT . "\n" . $content;
 
         // Call AI for extraction
-        $response = $this->provider->chat(
-            [['role' => 'user', 'content' => $prompt]],
-            'You extract structured information from conversations. Return only valid JSON.',
-            [],
-        );
+        $msgObjects = [
+            new Message('system', 'You extract structured information from conversations. Return only valid JSON.'),
+            new Message('user', $prompt),
+        ];
+        $response = $this->provider->chat($msgObjects, []);
 
-        $text = $response['content'] ?? '';
+        $text = $response->content ?? '';
         $extraction = $this->parseJson($text);
 
         if (!$extraction) {

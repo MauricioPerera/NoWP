@@ -25,24 +25,24 @@
 
 declare(strict_types=1);
 
-namespace Framework\Agent\Testing;
+namespace ChimeraNoWP\Agent\Testing;
 
-use Framework\Agent\Data\EntityMaterializer;
-use Framework\Agent\Workflow\WorkflowEngine;
-use Framework\Agent\Page\PageBuilder;
-use Framework\Agent\AgentService;
+use ChimeraNoWP\Agent\Data\EntityMaterializer;
+use ChimeraNoWP\Agent\Workflow\WorkflowEngine;
+use ChimeraNoWP\Agent\Page\PageBuilder;
+use ChimeraNoWP\Agent\AgentFacade;
 
 class TestRunner
 {
     private ?EntityMaterializer $materializer;
     private ?WorkflowEngine $workflow;
-    private ?AgentService $agent;
+    private ?AgentFacade $agent;
     private ?PageBuilder $pageBuilder;
 
     public function __construct(
         ?EntityMaterializer $materializer = null,
         ?WorkflowEngine $workflow = null,
-        ?AgentService $agent = null,
+        ?AgentFacade $agent = null,
         ?PageBuilder $pageBuilder = null,
     ) {
         $this->materializer = $materializer;

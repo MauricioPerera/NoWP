@@ -11,7 +11,7 @@
 
 declare(strict_types=1);
 
-namespace Framework\Cache;
+namespace ChimeraNoWP\Cache;
 
 class CacheManager
 {
@@ -123,14 +123,14 @@ class CacheManager
     public function remember(string $key, int $ttl, callable $callback): mixed
     {
         $value = $this->adapter->get($key);
-        
+
         if ($value !== null) {
             return $value;
         }
-        
+
         $value = $callback();
-        $this->adapter->set($key, $value, $ttl);
-        
+        $this->set($key, $value, $ttl);
+
         return $value;
     }
     
@@ -157,9 +157,18 @@ class CacheManager
         if (is_string($tagsOrKey)) {
             $this->adapter->delete($tagsOrKey);
         } else {
-            // For now, simple implementation - just delete by tag pattern
             foreach ($tagsOrKey as $tag) {
+                // Delete the key/tag directly
                 $this->adapter->delete($tag);
+                // Also look up any keys stored under this tag index and delete them
+                $tagKey = '_tag:' . $tag;
+                $keys = $this->adapter->get($tagKey);
+                if (is_array($keys)) {
+                    foreach ($keys as $key) {
+                        $this->adapter->delete($key);
+                    }
+                }
+                $this->adapter->delete($tagKey);
             }
         }
     }
@@ -198,7 +207,25 @@ class CacheManager
      */
     public function set(string $key, mixed $value, int $ttl = 3600): bool
     {
-        return $this->adapter->set($key, $value, $ttl);
+        $result = $this->adapter->set($key, $value, $ttl);
+
+        // Store tag associations so invalidate() can find keys by tag
+        if (!empty($this->tags)) {
+            foreach ($this->tags as $tag) {
+                $tagKey = '_tag:' . $tag;
+                $existing = $this->adapter->get($tagKey);
+                if (!is_array($existing)) {
+                    $existing = [];
+                }
+                if (!in_array($key, $existing, true)) {
+                    $existing[] = $key;
+                }
+                $this->adapter->set($tagKey, $existing, 0);
+            }
+            $this->tags = [];
+        }
+
+        return $result;
     }
     
     /**

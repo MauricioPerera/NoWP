@@ -11,12 +11,14 @@
 
 declare(strict_types=1);
 
-namespace Framework\Plugin;
+namespace ChimeraNoWP\Plugin;
 
 class HookSystem
 {
     private array $actions = [];
     private array $filters = [];
+    private array $actionsSorted = [];
+    private array $filtersSorted = [];
     
     /**
      * Add an action hook
@@ -37,8 +39,9 @@ class HookSystem
         }
         
         $this->actions[$hook][$priority][] = $callback;
+        unset($this->actionsSorted[$hook]);
     }
-    
+
     /**
      * Execute action hooks
      *
@@ -52,9 +55,12 @@ class HookSystem
             return;
         }
         
-        // Sort by priority
-        ksort($this->actions[$hook]);
-        
+        // Sort by priority (only if not already sorted)
+        if (!isset($this->actionsSorted[$hook])) {
+            ksort($this->actions[$hook]);
+            $this->actionsSorted[$hook] = true;
+        }
+
         foreach ($this->actions[$hook] as $callbacks) {
             foreach ($callbacks as $callback) {
                 call_user_func_array($callback, $args);
@@ -81,8 +87,9 @@ class HookSystem
         }
         
         $this->filters[$hook][$priority][] = $callback;
+        unset($this->filtersSorted[$hook]);
     }
-    
+
     /**
      * Apply filter hooks
      *
@@ -97,9 +104,12 @@ class HookSystem
             return $value;
         }
         
-        // Sort by priority
-        ksort($this->filters[$hook]);
-        
+        // Sort by priority (only if not already sorted)
+        if (!isset($this->filtersSorted[$hook])) {
+            ksort($this->filters[$hook]);
+            $this->filtersSorted[$hook] = true;
+        }
+
         foreach ($this->filters[$hook] as $callbacks) {
             foreach ($callbacks as $callback) {
                 $value = call_user_func_array($callback, array_merge([$value], $args));

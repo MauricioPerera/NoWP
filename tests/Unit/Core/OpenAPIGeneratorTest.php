@@ -1,7 +1,7 @@
 <?php
 
-use Framework\Core\OpenAPIGenerator;
-use Framework\Core\Router;
+use ChimeraNoWP\Core\OpenAPIGenerator;
+use ChimeraNoWP\Core\Router;
 
 beforeEach(function () {
     $this->router = new Router();

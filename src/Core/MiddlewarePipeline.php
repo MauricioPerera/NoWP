@@ -1,6 +1,8 @@
 <?php
 
-namespace Framework\Core;
+declare(strict_types=1);
+
+namespace ChimeraNoWP\Core;
 
 /**
  * Middleware Pipeline

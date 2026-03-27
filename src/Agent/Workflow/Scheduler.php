@@ -16,7 +16,7 @@
 
 declare(strict_types=1);
 
-namespace Framework\Agent\Workflow;
+namespace ChimeraNoWP\Agent\Workflow;
 
 class Scheduler
 {

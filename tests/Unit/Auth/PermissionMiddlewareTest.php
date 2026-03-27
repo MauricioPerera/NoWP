@@ -1,10 +1,10 @@
 <?php
 
-use Framework\Auth\PermissionMiddleware;
-use Framework\Auth\User;
-use Framework\Auth\UserRole;
-use Framework\Core\Request;
-use Framework\Core\Response;
+use ChimeraNoWP\Auth\PermissionMiddleware;
+use ChimeraNoWP\Auth\User;
+use ChimeraNoWP\Auth\UserRole;
+use ChimeraNoWP\Core\Request;
+use ChimeraNoWP\Core\Response;
 
 describe('PermissionMiddleware', function () {
     it('allows request when user has required permission', function () {

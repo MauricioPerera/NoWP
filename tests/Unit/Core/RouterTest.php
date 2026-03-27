@@ -1,9 +1,9 @@
 <?php
 
-use Framework\Core\Router;
-use Framework\Core\Route;
-use Framework\Core\Request;
-use Framework\Core\Response;
+use ChimeraNoWP\Core\Router;
+use ChimeraNoWP\Core\Route;
+use ChimeraNoWP\Core\Request;
+use ChimeraNoWP\Core\Response;
 
 describe('Router', function () {
     

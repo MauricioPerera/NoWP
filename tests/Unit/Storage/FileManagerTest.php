@@ -8,8 +8,8 @@
 
 declare(strict_types=1);
 
-use Framework\Storage\FileManager;
-use Framework\Storage\StoredFile;
+use ChimeraNoWP\Storage\FileManager;
+use ChimeraNoWP\Storage\StoredFile;
 
 beforeEach(function () {
     // Create temporary upload directory for tests

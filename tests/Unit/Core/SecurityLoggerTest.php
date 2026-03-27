@@ -1,6 +1,6 @@
 <?php
 
-use Framework\Core\SecurityLogger;
+use ChimeraNoWP\Core\SecurityLogger;
 
 beforeEach(function () {
     $this->logFile = __DIR__ . '/../../fixtures/security-test.log';
